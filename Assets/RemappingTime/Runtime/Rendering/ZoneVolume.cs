@@ -55,12 +55,15 @@ namespace RemappingTime
 
         private void Awake()
         {
-            _size = Params.Add(Tunable.Range("water.size", "Water block size", 0.1f, 0.8f, 0.3f, 0.02f, "m"));
-            _margin = Params.Add(Tunable.Range("water.margin", "Touch margin", 0f, 0.1f, 0.03f, 0.005f, "m",
+            _size = Params.Add(Tunable.Range("water.size", "Water block size", 0.1f, 0.8f, 0.35f, 0.01f, "m"));
+            _margin = Params.Add(Tunable.Range("water.margin", "Touch margin", 0f, 0.1f, 0.04f, 0.005f, "m",
                 "The water reacts this far outside its visible surface, so touching the surface is enough."));
             _opacity = Params.Add(Tunable.Range("water.opacity", "Water opacity", 0.2f, 1f, 0.9f, 0.05f));
             _look = Params.Add(Tunable.Choice("water.look", "Material look", new[] { "Water", "Honey" }, 0,
                 "Clear blue water, or thick amber honey."));
+
+            // Fixed by design (tested values); presets can still set them, but they are not shown in the UIs.
+            foreach (Tunable t in Params) t.Hidden = true;
         }
 
         public bool Visible
@@ -93,9 +96,20 @@ namespace RemappingTime
         /// Depth (m) of <paramref name="worldPoint"/> inside the trigger region (the block grown by the margin):
         /// the distance to its nearest face, 0 when outside.
         /// </summary>
-        public float Depth(Vector3 worldPoint, out bool inside)
+        public float Depth(Vector3 worldPoint, out bool inside) => Depth(worldPoint, transform.position, out inside);
+
+        /// <summary>
+        /// How far the trigger region is shifted toward the viewer (m). Hand tracking places the fingertip slightly
+        /// behind where people feel their finger touches, so contact registers late without it.
+        /// </summary>
+        public const float TriggerShiftTowardViewer = 0.05f;
+
+        /// <summary>Like <see cref="Depth(Vector3, out bool)"/>, with the trigger region shifted toward <paramref name="viewer"/>.</summary>
+        public float Depth(Vector3 worldPoint, Vector3 viewer, out bool inside)
         {
-            Vector3 p = transform.InverseTransformPoint(worldPoint);
+            Vector3 toViewer = Vector3.ProjectOnPlane(viewer - transform.position, Vector3.up);
+            Vector3 shift = toViewer.sqrMagnitude > 1e-4f ? toViewer.normalized * TriggerShiftTowardViewer : Vector3.zero;
+            Vector3 p = transform.InverseTransformPoint(worldPoint - shift);
             float half = _size.Value * 0.5f + _margin.Value;
             float depth = Mathf.Min(half - Mathf.Abs(p.x), Mathf.Min(half - Mathf.Abs(p.y), half - Mathf.Abs(p.z)));
             inside = depth > 0f;

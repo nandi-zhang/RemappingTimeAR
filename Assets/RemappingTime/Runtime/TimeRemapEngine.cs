@@ -247,7 +247,7 @@ namespace RemappingTime
         {
             if (Function == null || knob < 1 || knob > 3) return;
             Tunable k = knob == 1 ? Function.Knob1 : knob == 2 ? Function.Knob2 : Function.Knob3;
-            k.Label = string.IsNullOrWhiteSpace(label) ? $"k{knob} (unused)" : $"k{knob} · {label.Trim()}";
+            k.Label = string.IsNullOrWhiteSpace(label) ? $"k{knob}" : $"k{knob} · {label.Trim()}";
             SchemaChanged?.Invoke();
         }
 
@@ -335,7 +335,7 @@ namespace RemappingTime
                 foreach (MotionSample s in new[] { tracking.RightSample, tracking.LeftSample })
                 {
                     if (!s.Tracked) continue;
-                    float depth = zone.Depth(s.Position, out bool inside);
+                    float depth = zone.Depth(s.Position, ctx.Head.position, out bool inside);
                     if (inside && (!ctx.InZone || depth > ctx.ZoneDepth))
                     {
                         ctx.InZone = true;

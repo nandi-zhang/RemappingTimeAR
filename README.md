@@ -38,7 +38,7 @@ response to events**. That is what a *policy* does.
 | **u(t) and α(t) as formulas** | Type the trigger, u and α as formulas on the operator page (e.g. `on ? k1 * smoothstep(0, k3, ton) : 0`) and see the result instantly. 22 presets cover hold-to-slow, freeze, rewind, referee replay, motion slow-mo, hitstop, water, oscillation and more. |
 | **Effects, organised by the design space** | *Representation*: replace, ghost (semi-transparent) or echo trails (chronophotography). *Scope*: the whole view or a *time lens* around your hand. *Transparency*: speed colour and an edge glow signal the remapping (one toggle), or switch them off for low-transparency designs. |
 | **Timeline gallery** | Several presets side by side on floating screens, all fed by the same live camera and reacting to the same input. |
-| **Water / honey** | A refractive block of virtual water (or amber honey); formulas can read how deep a hand is inside it (`depth`, `inzone`) for pseudo-haptic "thick material" effects. |
+| **Water / honey** | A 35 cm refractive block of virtual water (or amber honey), reacting 4 cm outside its surface; formulas can read how deep a hand is inside it (`depth`, `inzone`) for pseudo-haptic "thick material" effects. |
 | **Status HUD** | A status display (delay, rate, phase, web address) that expands into a thumbstick-driven tuner with a live δ/r graph. |
 | **Web control** | The headset serves its own control pages. `/operator` (laptop): presets, formulas, all parameters, live telemetry. `/` (any phone): a big *hold to slow their world* button for onlookers. |
 | **Presets** | 22 built-in presets plus user presets saved on the device (formulas, knob names and settings). |
@@ -118,7 +118,10 @@ code (Python, TouchDesigner, a game server, …).
 
 ## Designing u(t) and α(t)
 
-Everything the system does is described by three formulas, editable live on the operator page:
+On the operator page, **Time remapping** shows three sliders that cover most designs: **u when triggered**,
+**α when triggered** and **α when released**. What "triggered" means (holding the trigger, moving fast, touching the
+water, …) comes from the preset. Behind them, everything is described by three formulas, editable under **Advanced**,
+where the sliders appear as `uon`, `aon` and `aoff`:
 
 | Formula | Meaning | Example |
 |---|---|---|
@@ -128,15 +131,17 @@ Everything the system does is described by three formulas, editable live on the 
 
 **Variables:** `t` time · `d` current delay δ · `B` buffer budget · `hold` 0–1 · `scrub` −1…1 · `speed` fastest hand in
 view (m/s) · `lspeed`, `rspeed` per hand · `depth` how deep a hand is in the water (m) · `inzone` · `on` · `ton` · `toff`
-· `tap` seconds since the last Trigger · `k1 k2 k3` knobs (0–10, tunable from the HUD and web; each preset names them).
+· `tap` seconds since the last Trigger · `uon aon aoff` the three sliders · `k1 k2 k3` **self-defined variables** (0–10,
+for any extra number a formula needs; each preset names its own, and they get sliders only when a formula uses them).
 
 **Language:** `+ − * / % ^`, comparisons, `&& || !`, `c ? a : b`, `pi`, and `sin cos tan abs sqrt exp log floor ceil
 round sign sat min max pow step clamp lerp smoothstep noise`. A value counts as true when it is above 0.5.
-Knobs that no formula uses are hidden.
+Sliders that no formula uses are hidden.
 
-**Drawn shapes:** two curves, `c1(x)` (a u shape, 0–2) and `c2(x)` (an α shape, 0–20), each over 0–4 s, are drawn on the
-operator page: drag points, double-click to add or remove. A dashed playhead shows the current `ton` / `toff`. Use them in
-any formula, e.g. *Draw your own*: u = `on ? c1(ton) : 0`, α = `on ? 0.05 : c2(toff)`. Curves are saved with presets.
+**Drawn shapes** (under Advanced): **u(t)**, drawn over seconds since triggered, and **α(t)**, drawn over seconds since
+released. Drag points, double-click to add or remove; a "now" line shows where the effect is while it runs, and *Use this
+shape* switches the formula over to it. In formulas they are `c1(x)` and `c2(x)`, e.g. *Draw your own*:
+u = `on ? c1(ton) : 0`, α = `on ? aon : c2(toff)`. Shapes are saved with presets.
 
 | Preset | when | u = | α = |
 |---|---|---|---|
@@ -173,8 +178,8 @@ representations). Presets saved from the operator page live in
   card shows `depth: … frames with depth N%`.
 - **Flat plane** (default): frames are drawn on one plane at the **projection distance** D. Exact for surfaces at D; elsewhere any
   camera movement between capture and display shows as parallax ∝ movement × |1/D − 1/depth|, including during head
-  rotation, because the cameras sit in front of the neck's pivot. Set D where the action is (≈0.6 m for hands over a
-  table, 1.5–2 m for watching another person).
+  rotation, because the cameras sit in front of the neck's pivot. D is fixed at 1 m (presets for close-up work such as
+  the water use 0.6 m); in practice the difference was hard to perceive, so it is not exposed in the UIs.
 - **Off**: the image follows the head (no reprojection).
 
 The planar-only version of the project is tagged `v0.1-planar-reprojection` in git.

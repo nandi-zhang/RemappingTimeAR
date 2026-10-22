@@ -92,6 +92,8 @@ namespace RemappingTime
                 "Off: the image follows your head."));
             _distance = Add(Display, Tunable.Range("view.distance", "Projection distance", 0.3f, 5f, 1.0f, 0.05f, "m",
                 "Depth that is exactly registered under head motion. Match it to where the action happens."));
+            // Fixed at 1 m in the UIs: in practice the difference was hard to perceive. Presets may still set it.
+            _distance.Hidden = true;
             _blend = Add(Display, Tunable.Toggle("view.blend", "Frame blending", true,
                 "Cross-fade neighbouring camera frames for smooth slow motion. Off = step from frame to frame."));
             _hideLive = Add(Display, Tunable.Toggle("view.hideLive", "Hide when live", true,

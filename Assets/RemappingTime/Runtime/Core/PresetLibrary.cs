@@ -148,7 +148,7 @@ namespace RemappingTime
             for (int k = 0; k < knobs.Length; k++)
             {
                 string label = preset.knobs != null && k < preset.knobs.Length ? preset.knobs[k] : "";
-                knobs[k].Label = string.IsNullOrEmpty(label) ? $"k{k + 1} (unused)" : $"k{k + 1} · {label}";
+                knobs[k].Label = string.IsNullOrEmpty(label) ? $"k{k + 1}" : $"k{k + 1} · {label}";
             }
         }
 
@@ -185,98 +185,99 @@ namespace RemappingTime
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // Built-in presets: each is a pair of formulas for u(t) and α(t) (plus a trigger), i.e. one point in
-        // the design space of time remapping. Knobs k1..k3 expose the numbers worth tuning live.
+        // Built-in presets: each is a trigger plus formulas for u(t) and α(t), i.e. one point in the design
+        // space of time remapping. Most use the three basic sliders (uon, aon, aoff); self-defined variables
+        // k1..k3 hold any extra numbers a preset needs (thresholds, timings), named per preset.
         // ─────────────────────────────────────────────────────────────────────
         private static IEnumerable<RemapPreset> BuiltIns()
         {
-            var catchUp = ("catch-up α", 5f);
+            var none = Array.Empty<(string, float)>();
+            (string, float) U(float v) => ("fn.uon", v);
+            (string, float) AOn(float v) => ("fn.aon", v);
+            (string, float) AOff(float v) => ("fn.aoff", v);
+            const string slowU = "on ? uon : 0", slowA = "on ? aon : aoff";
 
             yield return RemapPreset.Fn("Live", "Real time. Any leftover delay is caught up.",
-                "0", "0", "k2", new[] { ("", 0f), catchUp });
+                "0", "0", "aoff", none, AOff(5f));
 
             yield return RemapPreset.Fn("Hold to slow", "Hold the trigger (or Space) to slow time; release to fast-forward back.",
-                "hold", "on ? k1 : 0", "on ? 0.05 : k2", new[] { ("slowdown u", 0.8f), catchUp });
+                "hold", slowU, slowA, none, U(0.8f), AOn(0.05f), AOff(5f));
 
             // Analog option: a half-pressed trigger (or the web strength slider) gives half the slowdown.
             yield return RemapPreset.Fn("Hold to slow (analog)", "Squeeze the trigger harder for slower time; release to fast-forward back.",
-                "hold > 0.05", "on ? k1 * hold : 0", "on ? 0.05 : k2", new[] { ("slowdown u at full press", 0.8f), catchUp });
+                "hold > 0.05", "on ? uon * hold : 0", slowA, none, U(0.8f), AOn(0.05f), AOff(5f));
 
             yield return RemapPreset.Fn("Bullet time", "Very slow while held, then a long dramatic fast-forward.",
-                "hold", "on ? k1 : 0", "on ? 0.02 : k2", new[] { ("slowdown u", 0.92f), ("catch-up α", 3f) });
+                "hold", slowU, slowA, none, U(0.92f), AOn(0.02f), AOff(3f));
 
             yield return RemapPreset.Fn("Freeze frame", "Hold to freeze the world (u = 1).",
-                "hold", "on ? 1 : 0", "on ? 0 : k2", new[] { ("", 0f), catchUp });
+                "hold", slowU, slowA, none, U(1f), AOn(0f), AOff(5f));
 
-            yield return RemapPreset.Fn("Gradual brake", "Time eases into slow motion over k3 seconds instead of switching at once.",
-                "hold", "on ? k1 * smoothstep(0, k3, ton) : 0", "on ? 0.05 : k2",
-                new[] { ("slowdown u", 0.9f), catchUp, ("ease-in s", 1.5f) });
+            yield return RemapPreset.Fn("Gradual brake", "Time eases into slow motion over k1 seconds instead of switching at once.",
+                "hold", "on ? uon * smoothstep(0, k1, ton) : 0", slowA,
+                new[] { ("ease-in seconds", 1.5f) }, U(0.9f), AOn(0.05f), AOff(4f));
 
-            yield return RemapPreset.Fn("Rewind while held", "Hold to play the world backwards (u > 1).",
-                "hold", "on ? 1 + k1 : 0", "on ? 0 : k2", new[] { ("rewind speed ×", 1f), ("catch-up α", 3f) });
+            yield return RemapPreset.Fn("Rewind while held", "Hold to play the world backwards (u > 1; u = 2 rewinds at normal speed).",
+                "hold", slowU, slowA, none, U(2f), AOn(0f), AOff(3f));
 
             yield return RemapPreset.Fn("Referee replay", "Hold to pause; push the stick or web slider left to rewind, right to play.",
-                "hold || abs(scrub) > 0.15", "on ? 1 - k1 * scrub : 0", "on ? 0 : k2",
-                new[] { ("scrub speed ×", 1.5f), ("catch-up α", 3f) }, ("view.distance", 1.8f));
+                "hold || abs(scrub) > 0.15", "on ? 1 - k1 * scrub : 0", slowA,
+                new[] { ("scrub speed ×", 1.5f) }, AOn(0f), AOff(3f), ("view.distance", 1.8f));
 
             yield return RemapPreset.Fn("Motion slow-mo", "Fast hand motion (in view) slows the world; it recovers when you stop.",
-                "speed > k3", "on || toff < 0.15 ? k1 : 0", "on || toff < 0.15 ? 0.05 : k2",
-                new[] { ("slowdown u", 0.75f), catchUp, ("speed threshold m/s", 0.6f) });
+                "speed > k1", "on || toff < 0.15 ? uon : 0", "on || toff < 0.15 ? aon : aoff",
+                new[] { ("speed threshold m/s", 0.6f) }, U(0.75f), AOn(0.05f), AOff(5f));
 
             yield return RemapPreset.Fn("Outrun yourself", "The faster you move, the slower your image: u grows with hand speed.",
-                "speed > k3", "on ? min(0.95, k1 * (speed - k3)) : 0", "on ? 0.05 : k2",
-                new[] { ("gain per m/s", 0.4f), catchUp, ("speed threshold m/s", 0.3f) }, ("tracking.marker", 1));
+                "speed > k1", "on ? min(0.95, k2 * (speed - k1)) : 0", slowA,
+                new[] { ("speed threshold m/s", 0.3f), ("u per m/s", 0.4f) }, AOn(0.05f), AOff(5f), ("tracking.marker", 1));
 
-            // The freeze latches for k1 seconds ('on && ton < k1' keeps 'when' true), so enough delay builds up
+            // The freeze latches for k2 seconds ('on && ton < k2' keeps 'when' true), so enough delay builds up
             // for a visible burst when it releases.
             yield return RemapPreset.Fn("Hitstop punch", "A fast strike (or the Trigger button) freezes the world, then it bursts forward.",
-                "speed > k3 || tap < 0.3 || (on && ton < k1)", "on ? 0.95 : 0", "on ? 0 : k2",
-                new[] { ("freeze s", 0.35f), ("burst α", 8f), ("strike speed m/s", 0.9f) });
+                "speed > k1 || tap < 0.3 || (on && ton < k2)", slowU, slowA,
+                new[] { ("strike speed m/s", 0.9f), ("freeze seconds", 0.35f) }, U(0.95f), AOn(0f), AOff(8f));
 
-            yield return RemapPreset.Fn("Water", "Moving a hand through the water slows time with depth: a pseudo-haptic 'thick' material.",
-                "inzone", "on ? k1 * sat(depth / 0.03) : 0", "on ? k3 : k2",
-                new[] { ("thickness u", 0.85f), ("release α", 6f), ("settle α inside", 1.5f) },
-                ("view.distance", 0.6f), ("water.look", 0));
+            yield return RemapPreset.Fn("Water", "Moving a hand through the water slows time: a pseudo-haptic 'thick' material.",
+                "inzone", "on ? uon * sat(depth / 0.03) : 0", slowA, none,
+                U(0.85f), AOn(1.5f), AOff(6f), ("view.distance", 0.6f), ("water.look", 0));
 
             yield return RemapPreset.Fn("Honey", "A much thicker material: deep, slow, and slow to let go.",
-                "inzone", "on ? k1 * sat(depth / 0.03) : 0", "on ? k3 : k2",
-                new[] { ("thickness u", 0.95f), ("release α", 3f), ("settle α inside", 0.6f) },
-                ("view.distance", 0.6f), ("water.look", 1));
+                "inzone", "on ? uon * sat(depth / 0.03) : 0", slowA, none,
+                U(0.95f), AOn(0.6f), AOff(3f), ("view.distance", 0.6f), ("water.look", 1));
 
             // Shapes drawn on the operator page: c1 = u over seconds since pressing, c2 = α over seconds since release.
-            yield return RemapPreset.Fn("Draw your own", "Shape the slowdown and the catch-up yourself by dragging points on the two graphs.",
-                "hold", "on ? c1(ton) : 0", "on ? 0.05 : c2(toff)", Array.Empty<(string, float)>());
+            yield return RemapPreset.Fn("Draw your own", "Shape the slowdown and the catch-up yourself by dragging points on the two graphs (Advanced).",
+                "hold", "on ? c1(ton) : 0", "on ? aon : c2(toff)", none, AOn(0.05f));
 
             var loop = RemapPreset.Fn("Looping shape", "A drawn rhythm of slowdowns that repeats every k1 seconds.",
-                "1", "c1(t % k1)", "c1(t % k1) > 0.5 ? 0.05 : k2", new[] { ("loop length s", 2f), ("recovery α between beats", 3f) });
+                "1", "c1(t % k1)", "c1(t % k1) > 0.5 ? aon : aoff", new[] { ("loop length s", 2f) }, AOn(0.05f), AOff(3f));
             loop.curves = new[] { new CurveData { name = "c1", xs = new[] { 0f, 0.2f, 0.5f, 0.7f, 2f }, ys = new[] { 0f, 0.95f, 0.95f, 0f, 0f } } };
             yield return loop;
 
-            yield return RemapPreset.Fn("Time wobble", "u follows a sine wave, so time breathes slower and faster around real time.",
-                "1", "max(0, k1 + 0.6 * sin(2 * pi * k3 * t))", "k2",
-                new[] { ("base u", 0.3f), ("recovery α", 1.5f), ("frequency Hz", 0.5f) });
+            yield return RemapPreset.Fn("Time wobble", "u follows a sine wave around 'u when triggered', so time breathes slower and faster.",
+                "1", "max(0, uon + 0.6 * sin(2 * pi * k1 * t))", "aon",
+                new[] { ("wobbles per second", 0.5f) }, U(0.3f), AOn(1.5f));
 
             yield return RemapPreset.Fn("Stutter", "Brief freezes on a beat, like a skipping video.",
-                "1", "0.98 * step(k1, sin(2 * pi * k3 * t))", "k2",
-                new[] { ("freeze share", 0.7f), ("recovery α", 8f), ("beats per s", 1.2f) });
+                "1", "uon * step(0.7, sin(2 * pi * k1 * t))", "aon", new[] { ("beats per second", 1.2f) }, U(0.98f), AOn(8f));
 
             yield return RemapPreset.Fn("Drifting time", "Smoothly random slowdowns: time wanders.",
-                "1", "k1 * noise(k3 * t)", "k2", new[] { ("drift u", 0.8f), ("recovery α", 1f), ("wander speed", 0.4f) });
+                "1", "uon * noise(k1 * t)", "aon", new[] { ("wander speed", 0.4f) }, U(0.8f), AOn(1f));
 
             yield return RemapPreset.Fn("Constant u, α", "Fixed inputs settle into a constant lag (δ → u/α) at normal speed.",
-                "0", "k1", "k2", new[] { ("u", 0.3f), ("α", 1f) });
+                "1", "uon", "aon", none, U(0.3f), AOn(1f));
 
             yield return RemapPreset.Fn("Echo trails", "Hold to slow, with earlier moments trailing behind moving things.",
-                "hold", "on ? k1 : 0", "on ? 0.05 : k2", new[] { ("slowdown u", 0.8f), catchUp },
+                "hold", slowU, slowA, none, U(0.8f), AOn(0.05f), AOff(5f),
                 ("view.echo", 1), ("view.echoCount", 4), ("view.echoSpacing", 0.07f), ("view.echoStrength", 0.5f));
 
             yield return RemapPreset.Fn("Time lens", "Only a circle around your hand is remapped.",
-                "hold", "on ? k1 : 0", "on ? 0.05 : k2", new[] { ("slowdown u", 0.8f), catchUp },
+                "hold", slowU, slowA, none, U(0.8f), AOn(0.05f), AOff(5f),
                 ("view.scope", 1), ("view.lensAnchor", 0), ("view.lensRadius", 0.22f), ("view.hideLive", 0));
 
             yield return RemapPreset.Fn("Ghost", "The slowed world appears as a ghost over the live one.",
-                "hold", "on ? k1 : 0", "on ? 0.05 : k2", new[] { ("slowdown u", 0.8f), catchUp },
-                ("view.opacity", 0.55f), ("view.hideLive", 0));
+                "hold", slowU, slowA, none, U(0.8f), AOn(0.05f), AOff(5f), ("view.opacity", 0.55f), ("view.hideLive", 0));
         }
     }
 }

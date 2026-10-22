@@ -33,6 +33,7 @@ namespace RemappingTime
         public static readonly string[] Variables =
         {
             "t", "d", "B", "hold", "scrub", "speed", "lspeed", "rspeed", "depth", "inzone", "on", "ton", "toff", "tap", "k1", "k2", "k3",
+            "uon", "aon", "aoff",
         };
 
         public static readonly string[] VariableHelp =
@@ -51,13 +52,25 @@ namespace RemappingTime
             "seconds since 'when' became true (0 while off)",
             "seconds since 'when' became false (0 while on)",
             "seconds since the last Trigger press (A button / web)",
-            "knob 1 (0–10)", "knob 2 (0–10)", "knob 3 (0–10)",
+            "self-defined variable 1 (0–10)", "self-defined variable 2 (0–10)", "self-defined variable 3 (0–10)",
+            "u when triggered (slider)", "α when triggered (slider)", "α when released (slider)",
         };
 
         private const int T = 0, D = 1, Budget = 2, Hold = 3, Scrub = 4, Speed = 5, LSpeed = 6, RSpeed = 7,
-                          Depth = 8, InZone = 9, On = 10, TOn = 11, TOff = 12, Tap = 13, K1 = 14, K2 = 15, K3 = 16;
+                          Depth = 8, InZone = 9, On = 10, TOn = 11, TOff = 12, Tap = 13, K1 = 14, K2 = 15, K3 = 16,
+                          UOn = 17, AOn = 18, AOff = 19;
 
+        /// <summary>Self-defined variables k1–k3: free numbers a preset names and uses inside its formulas.</summary>
         public readonly Tunable Knob1, Knob2, Knob3;
+
+        /// <summary>
+        /// The three basic constants most designs need, shown as plain sliders: u while triggered, and α while
+        /// triggered / after release. Formulas use them as <c>uon</c>, <c>aon</c>, <c>aoff</c>.
+        /// </summary>
+        public readonly Tunable UWhenOn, AlphaWhenOn, AlphaWhenOff;
+
+        /// <summary>UI group of the basic sliders, and of the self-defined variables.</summary>
+        public const string BasicGroup = "Time", VariablesGroup = "Self-defined";
 
         /// <summary>
         /// Two drawable shapes, callable in formulas as <c>c1(x)</c> and <c>c2(x)</c>: by convention c1 shapes u
@@ -98,10 +111,18 @@ namespace RemappingTime
             ResetCurves();
             Curve1.Changed += () => ExpressionsChanged?.Invoke();
             Curve2.Changed += () => ExpressionsChanged?.Invoke();
+            UWhenOn = Range("uon", "u when triggered", 0f, 2f, 0.8f, 0.01f, "",
+                "How fast delay builds while triggered: 0.8 = five times slower, 1 = freeze, above 1 = rewind.");
+            AlphaWhenOn = Range("aon", "α when triggered", 0f, 20f, 0.05f, 0.01f, "",
+                "How strongly time is pulled back toward real time while triggered. Small = the slowdown lasts.");
+            AlphaWhenOff = Range("aoff", "α when released", 0f, 20f, 5f, 0.05f, "",
+                "How fast it catches up after release: catch-up takes about 3/α seconds (5 ≈ 0.6 s).");
             Knob1 = Range("k1", "k1", 0f, 10f, 0.8f, 0.01f);
             Knob2 = Range("k2", "k2", 0f, 10f, 5f, 0.01f);
             Knob3 = Range("k3", "k3", 0f, 10f, 1f, 0.01f);
-            SetExpressions("hold", "on ? k1 : 0", "on ? 0.05 : k2");
+            foreach (Tunable t in new[] { UWhenOn, AlphaWhenOn, AlphaWhenOff }) t.Group = BasicGroup;
+            foreach (Tunable t in new[] { Knob1, Knob2, Knob3 }) t.Group = VariablesGroup;
+            SetExpressions("hold", "on ? uon : 0", "on ? aon : aoff");
         }
 
         public override bool UsesZone => Reads(Depth) || Reads(InZone);
@@ -139,6 +160,9 @@ namespace RemappingTime
             Knob1.Hidden = !Reads(K1);
             Knob2.Hidden = !Reads(K2);
             Knob3.Hidden = !Reads(K3);
+            UWhenOn.Hidden = !Reads(UOn);
+            AlphaWhenOn.Hidden = !Reads(AOn);
+            AlphaWhenOff.Hidden = !Reads(AOff);
             ExpressionsChanged?.Invoke();
             return true;
         }
@@ -178,6 +202,9 @@ namespace RemappingTime
             _vars[K1] = Knob1.Value;
             _vars[K2] = Knob2.Value;
             _vars[K3] = Knob3.Value;
+            _vars[UOn] = UWhenOn.Value;
+            _vars[AOn] = AlphaWhenOn.Value;
+            _vars[AOff] = AlphaWhenOff.Value;
 
             // The trigger sees the previous on/ton/toff (so 'when' can refer to them, e.g. for latching).
             float elapsed = (float)Math.Min(1000.0, ctx.Time - _changedAt);

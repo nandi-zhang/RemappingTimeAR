@@ -51,7 +51,12 @@
   .curve .head b { color: var(--text); font-family: ui-monospace, Consolas, monospace; }
   .curve canvas { width: 100%; height: 150px; display: block; background: var(--panel2); border-radius: 8px;
     margin-top: 4px; cursor: crosshair; touch-action: none; }
-  .curve.unused { opacity: 0.55; }
+  .curve.unused canvas { opacity: 0.55; }
+  .curve .use button { padding: 3px 10px; font-size: 12px; }
+  .advanced { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+  .advanced > summary { cursor: pointer; color: var(--cool); font-weight: 600; }
+  .card h3 { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; font-weight: 600; }
+  .card h3 small { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 6px; }
   .param .name.knob { cursor: pointer; }
   .param .name.unused { opacity: 0.45; }
   .card h2 small { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 6px; }
@@ -93,7 +98,7 @@
   canvas { width: 100%; height: 240px; display: block; }
   .legend { display: flex; gap: 14px; color: var(--muted); font-size: 12px; margin-top: 6px; flex-wrap: wrap; }
   .legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
-  .bars { display: grid; grid-template-columns: 110px 1fr 54px; gap: 8px 10px; align-items: center; font-size: 13px; }
+  .bars { display: grid; grid-template-columns: 110px 1fr 84px; gap: 8px 10px; align-items: center; font-size: 13px; }
   .bar { height: 8px; background: #1d2431; border-radius: 4px; overflow: hidden; position: relative; }
   .bar > div { position: absolute; top: 0; bottom: 0; left: 0; background: var(--cool); border-radius: 4px; }
   .bar.center > div { left: 50%; }
@@ -141,29 +146,38 @@
     </div>
 
     <div class="card" id="fnCard">
-      <h2>Time function<small>· design u(t) and α(t)</small></h2>
-      <div class="fx"><label for="fxWhen" title="Trigger condition. While true: on = 1, ton counts up.">when</label><input type="text" id="fxWhen" class="code" spellcheck="false" autocomplete="off"></div>
-      <div class="fxerr" id="errWhen"></div>
-      <div class="fx"><label for="fxU" title="Injection: 0 = real time, 0.8 = 5× slower, 1 = freeze, >1 = rewind">u =</label><input type="text" id="fxU" class="code" spellcheck="false" autocomplete="off"></div>
-      <div class="fxerr" id="errU"></div>
-      <div class="fx"><label for="fxAlpha" title="Recovery: how strongly the delay is pulled back (catch-up ≈ 3/α seconds)">α =</label><input type="text" id="fxAlpha" class="code" spellcheck="false" autocomplete="off"></div>
-      <div class="fxerr" id="errAlpha"></div>
-      <div class="desc">
-        <b>u</b> adds delay: 0 = real time · 0.8 = 5× slower · 1 = freeze · &gt;1 = rewind.
-        <b>α</b> pulls it back: catch-up takes about 3/α seconds.
-        <code>c ? a : b</code> picks a when c is true. Press <b>Enter</b> to apply a formula.
-      </div>
-      <details class="vars"><summary>Variables and functions you can use</summary>
-        <table id="varTable"></table>
-        <div class="desc" id="fnList"></div>
-      </details>
-    </div>
+      <h2>Time remapping<small>· u (adds delay) and α (pulls it back)</small></h2>
+      <div class="desc" style="margin-top:0">Triggered by <code id="trigText">–</code>.
+        <b>u</b> adds delay (0 = real time · 0.8 = 5× slower · 1 = freeze · &gt;1 = rewind);
+        <b>α</b> pulls it back (catch-up ≈ 3/α seconds).</div>
+      <div class="group" id="basicParams" style="margin-top:10px"></div>
 
-    <div class="card" id="curveCard">
-      <h2>Shapes<small>· drag points · double-click to add or remove · use as c1(x), c2(x) in the formulas</small></h2>
-      <div id="curves"></div>
-      <div class="desc">Try the <b>Draw your own</b> preset: u follows c1 while you hold (x = seconds since pressing), and α follows c2
-        after you let go (x = seconds since release). The dashed line shows where the formulas are right now.</div>
+      <details class="advanced" id="advanced">
+        <summary>Advanced: formulas, self-defined variables and drawn shapes</summary>
+
+        <div class="fx"><label for="fxWhen" title="Trigger condition. While true: on = 1, ton counts up.">when</label><input type="text" id="fxWhen" class="code" spellcheck="false" autocomplete="off"></div>
+        <div class="fxerr" id="errWhen"></div>
+        <div class="fx"><label for="fxU" title="Injection: 0 = real time, 0.8 = 5× slower, 1 = freeze, >1 = rewind">u =</label><input type="text" id="fxU" class="code" spellcheck="false" autocomplete="off"></div>
+        <div class="fxerr" id="errU"></div>
+        <div class="fx"><label for="fxAlpha" title="Recovery: how strongly the delay is pulled back (catch-up ≈ 3/α seconds)">α =</label><input type="text" id="fxAlpha" class="code" spellcheck="false" autocomplete="off"></div>
+        <div class="fxerr" id="errAlpha"></div>
+        <div class="desc">
+          The sliders above are <code>uon</code>, <code>aon</code>, <code>aoff</code> in the formulas.
+          <code>c ? a : b</code> picks a when c is true. Press <b>Enter</b> to apply a formula.
+        </div>
+
+        <h3>Self-defined variables<small>· k1, k2, k3 in the formulas · click a name to rename it</small></h3>
+        <div class="group" id="varParams"></div>
+        <div class="desc" id="noVars">The current formulas don't use any. Write k1, k2 or k3 in a formula to add a slider for it.</div>
+
+        <h3>Drawn shapes<small>· drag points · double-click to add or remove</small></h3>
+        <div id="curves"></div>
+
+        <details class="vars"><summary>Variables and functions you can use</summary>
+          <table id="varTable"></table>
+          <div class="desc" id="fnList"></div>
+        </details>
+      </details>
     </div>
 
     <div class="card">
@@ -172,7 +186,7 @@
         <button class="btn" data-action="live" title="Fast-forward to real time now (L)">Snap to live</button>
         <button class="btn" data-action="trigger" title="Sets 'tap' to 0, for formulas that react to it (P / A button)">Trigger</button>
         <button class="btn" data-action="moveWater" id="moveWater" title="Place the water block in front of the wearer">Move water in front</button>
-        <button class="btn" data-action="resetKnobs" title="Put k1, k2, k3 back to the preset's values">Reset knobs</button>
+        <button class="btn" data-action="resetKnobs" title="Put the u and α sliders and self-defined variables back to the preset's values">Reset values</button>
       </div>
       <div style="margin-top:10px"><button class="btn hold" id="hold">Hold (or hold Space): drives 'hold' in the formulas</button></div>
       <div class="muted" style="margin-top:6px; font-size:12px">Keys: Space = hold · P = trigger · L = snap to live</div>
@@ -308,6 +322,7 @@
     $('fnCard').style.display = hasFn ? '' : 'none';
     if (hasFn) {
       setFormula('fxWhen', fn.when); setFormula('fxU', fn.u); setFormula('fxAlpha', fn.alpha);
+      $('trigText').textContent = fn.when || '–';
       $('moveWater').style.display = fn.usesWater ? '' : 'none';
       const table = $('varTable'); table.innerHTML = '';
       (fn.variables || []).forEach((v, i) => {
@@ -319,13 +334,17 @@
       $('fnList').textContent = 'Functions: ' + (fn.functions || []).map(f => f + '()').join(', ') +
         ' · operators: + − * / % ^, < <= > >= == !=, && || !, c ? a : b · constants: pi.';
     }
-    $('curveCard').style.display = hasFn && fn.curves && fn.curves.length ? '' : 'none';
     if (hasFn) buildCurves(fn.curves || [], isOp);
     buildTunables(m.tunables, isOp);
   }
 
   // ── Shapes (drawable curves c1, c2) ─────────────────────────────────────
   const curves = {};   // name -> { info, xs, ys, canvas, drag, lastSend, isOp }
+  // How each drawn curve is presented, and the formula that puts it to use.
+  const SHAPES = {
+    c1: { title: 'u(t)', axis: 'x = seconds since triggered', clock: 'on', use: { id: 'u', name: 'on ? c1(ton) : 0' } },
+    c2: { title: 'α(t)', axis: 'x = seconds since released', clock: 'off', use: { id: 'alpha', name: 'on ? aon : c2(toff)' } },
+  };
   function buildCurves(list, isOp) {
     for (const info of list) {
       let c = curves[info.name];
@@ -337,9 +356,17 @@
         attachCurveEvents(info.name);
       }
       c.info = info; c.isOp = isOp;
-      c.wrap.querySelector('b').textContent = info.name + '(x)';
-      c.wrap.querySelector('.lbl').textContent = '· ' + info.label + ` · x 0–${info.xMax} s, y ${info.yMin}–${info.yMax}`;
-      c.wrap.querySelector('.use').textContent = info.used ? 'used by the formulas' : 'not used by the current formulas';
+      const meta = SHAPES[info.name] || { title: info.name, axis: '', use: null };
+      c.wrap.querySelector('b').textContent = meta.title;
+      c.wrap.querySelector('.lbl').textContent = `· ${meta.axis} · ${info.name}(x) in formulas`;
+      const use = c.wrap.querySelector('.use'); use.innerHTML = '';
+      if (info.used) use.textContent = 'in use';
+      else if (meta.use) {
+        const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'Use this shape'; b.disabled = !isOp;
+        b.title = `Sets ${meta.use.id === 'u' ? 'u' : 'α'} = ${meta.use.name}`;
+        b.onclick = () => send({ type: 'expr', id: meta.use.id, name: meta.use.name });
+        use.appendChild(b);
+      }
       c.wrap.classList.toggle('unused', !info.used);
       if (c.drag < 0) { c.xs = info.xs.slice(); c.ys = info.ys.slice(); }   // never overwrite a curve being dragged
     }
@@ -409,12 +436,17 @@
       x.font = '11px system-ui'; x.fillStyle = '#8592a6'; x.strokeStyle = '#2a3242'; x.lineWidth = 1;
       for (let s = 0; s <= c.info.xMax; s++) { x.beginPath(); x.moveTo(g.X(s), g.pad.t); x.lineTo(g.X(s), g.pad.t + g.H); x.stroke(); x.fillText(s + 's', g.X(s) - 6, g.h - 5); }
       x.textAlign = 'right'; x.fillText(c.info.yMax, g.pad.l - 4, g.pad.t + 9); x.fillText(c.info.yMin, g.pad.l - 4, g.pad.t + g.H); x.textAlign = 'left';
-      // Playhead: where the formulas are now (ton while triggered, toff after release).
-      if (state) {
-        const px = Math.min(c.info.xMax, state.fnOn ? state.fnTon : state.fnToff);
-        x.setLineDash([4, 4]); x.strokeStyle = state.fnOn ? '#5fd3ff' : '#ffb24d';
-        x.beginPath(); x.moveTo(g.X(px), g.pad.t); x.lineTo(g.X(px), g.pad.t + g.H); x.stroke(); x.setLineDash([]);
-        x.fillStyle = x.strokeStyle; x.fillText(state.fnOn ? 'ton' : 'toff', Math.min(g.X(px) + 4, g.w - 30), g.pad.t + 10);
+      // Playhead: where along this shape the effect is right now. u(t) runs while triggered, α(t) during
+      // the catch-up after release; outside those moments (or past the end of the graph) nothing is shown.
+      const clock = (SHAPES[name] || {}).clock;
+      if (state && clock) {
+        const running = clock === 'on' ? state.fnOn : !state.fnOn;
+        const px = clock === 'on' ? state.fnTon : state.fnToff;
+        if (running && px < c.info.xMax) {
+          x.setLineDash([4, 4]); x.strokeStyle = clock === 'on' ? '#5fd3ff' : '#ffb24d';
+          x.beginPath(); x.moveTo(g.X(px), g.pad.t); x.lineTo(g.X(px), g.pad.t + g.H); x.stroke(); x.setLineDash([]);
+          x.fillStyle = x.strokeStyle; x.fillText('now', Math.min(g.X(px) + 4, g.w - 30), g.pad.t + 10);
+        }
       }
       // The curve: flat before the first and after the last point.
       x.strokeStyle = name === 'c1' ? '#c49bff' : '#6ee7a8'; x.lineWidth = 2.2; x.beginPath();
@@ -470,10 +502,15 @@
       if (t.id === 'engine.policy' || t.id === 'engine.preset') continue; // dedicated UI above
       (groups[t.group] = groups[t.group] || []).push(t);
     }
+    // The u/α sliders and self-defined variables live inside the "u and α" card, not in their own cards.
+    const basic = $('basicParams'), vars = $('varParams');
+    basic.innerHTML = ''; vars.innerHTML = '';
+    for (const t of groups['Time'] || []) basic.appendChild(makeControl(t, isOp));
+    for (const t of groups['Self-defined'] || []) vars.appendChild(makeControl(t, isOp));
+    $('noVars').style.display = (groups['Self-defined'] || []).length ? 'none' : '';
+    delete groups['Time']; delete groups['Self-defined'];
     // Effects follow the design space of time remapping; the rest are setup.
     const order = [
-      ['Policy', 'Knobs', 'k1, k2, k3 inside the formulas · click a name to rename it'],
-      ['Water', 'Water', 'the virtual water block'],
       ['Representation', 'Representation', 'how the remapped world is shown'],
       ['Scope', 'Scope', 'where in view time is remapped'],
       ['Transparency', 'Transparency', 'how visibly the remapping is signalled'],
@@ -507,7 +544,7 @@
     name.textContent = t.label; name.title = (t.help ? t.help + '\n' : '') + 'Double-click to reset to default.';
     if (t.help) { const s = document.createElement('small'); s.textContent = t.help; name.appendChild(s); }
     name.ondblclick = () => { if (isOp) { setParam(t.id, t.def); controls[t.id].update(t.def, true); } };
-    // Knobs (fn.k1..k3): click the name to rename it; unused knobs are dimmed.
+    // Self-defined variables (fn.k1..k3): click the name to rename it.
     const knob = /^fn\.k([123])$/.exec(t.id);
     if (knob) {
       name.classList.add('knob');
@@ -516,7 +553,7 @@
       name.onclick = () => {
         if (!isOp) return;
         const current = t.label.includes('·') ? t.label.split('·')[1].trim() : '';
-        const label = prompt(`Name for knob k${knob[1]} (what it controls in your formulas):`, current);
+        const label = prompt(`Name for self-defined variable k${knob[1]} (what it controls in your formulas):`, current);
         if (label !== null) send({ type: 'knobLabel', id: knob[1], name: label });
       };
     }
