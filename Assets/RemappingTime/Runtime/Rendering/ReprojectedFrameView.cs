@@ -85,10 +85,11 @@ namespace RemappingTime
                 "and glows at its edges as delay builds. Off: no visual hint, so the wearer must notice the remapping themselves."));
 
             // Display quality and registration.
-            _reproject = Add(Display, Tunable.Choice("view.reprojection", "Head reprojection", new[] { "Off", "Flat plane", "Depth" }, 2,
-                "How past frames are placed as you move your head. Flat plane: on one plane at the projection distance " +
-                "(exact only at that distance). Depth: bent to the scene's measured depth (Meta Depth API), so near and far " +
-                "things stay aligned; falls back to the plane where there is no depth. Off: the image follows your head."));
+            _reproject = Add(Display, Tunable.Choice("view.reprojection", "Head reprojection", new[] { "Off", "Flat plane", "Depth (experimental)" }, 1,
+                "How past frames are placed as you move your head. Flat plane (default): on one plane at the projection distance, " +
+                "clean but exact only at that distance. Depth (experimental): bent to the scene's measured depth (Meta Depth API), " +
+                "so near and far things stay aligned as you move, but the coarse depth map breaks up fine details. " +
+                "Off: the image follows your head."));
             _distance = Add(Display, Tunable.Range("view.distance", "Projection distance", 0.3f, 5f, 1.0f, 0.05f, "m",
                 "Depth that is exactly registered under head motion. Match it to where the action happens."));
             _blend = Add(Display, Tunable.Toggle("view.blend", "Frame blending", true,

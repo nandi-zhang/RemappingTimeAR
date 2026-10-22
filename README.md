@@ -165,13 +165,13 @@ representations). Presets saved from the operator page live in
 
 *Display → Head reprojection* has three modes:
 
-- **Depth** (default): each buffered frame stores the depth map from Meta's Depth API, and the frame is drawn as a grid
+- **Depth (experimental)**: each buffered frame stores the depth map from Meta's Depth API, and the frame is drawn as a grid
   whose points are pushed out to the scene's measured depth along their camera rays. Near and far things both stay put
   as you move or turn your head. Limitations: the depth map is low resolution and smoothed, so sharp depth edges (a hand in
   front of a far wall) stretch slightly, and fast-moving objects lag in the depth sensor. Where there is no depth, the
-  plane below is used. Requires the *spatial data* permission (asked on first launch); the operator page's Diagnostics
+  plane below is used. In practice alignment is very good, but fine details break up along the coarse depth mesh. Requires the *spatial data* permission (asked on first launch); the operator page's Diagnostics
   card shows `depth: … frames with depth N%`.
-- **Flat plane**: frames are drawn on one plane at the **projection distance** D. Exact for surfaces at D; elsewhere any
+- **Flat plane** (default): frames are drawn on one plane at the **projection distance** D. Exact for surfaces at D; elsewhere any
   camera movement between capture and display shows as parallax ∝ movement × |1/D − 1/depth|, including during head
   rotation, because the cameras sit in front of the neck's pivot. Set D where the action is (≈0.6 m for hands over a
   table, 1.5–2 m for watching another person).
