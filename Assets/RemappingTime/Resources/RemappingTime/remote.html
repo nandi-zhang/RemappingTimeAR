@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0b0d12">
+<title>Remapping Time · Remote</title>
+<style>
+  :root {
+    --bg: #0b0d12; --panel: #141821; --line: #232a36; --text: #e8edf5; --muted: #8a96a8;
+    --cool: #5fd3ff; --warm: #ffb24d; --violet: #c49bff; --ok: #4ade80; --bad: #f87171;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { display: flex; flex-direction: column; align-items: center; padding: 16px;
+    user-select: none; -webkit-user-select: none; touch-action: manipulation; overflow: hidden; }
+  header { width: 100%; max-width: 480px; display: flex; justify-content: space-between; align-items: center; }
+  h1 { font-size: 15px; font-weight: 600; letter-spacing: .02em; margin: 0; }
+  .conn { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
+  .dot.on { background: var(--ok); }
+  main { flex: 1; width: 100%; max-width: 480px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 20px; }
+  .policy { text-align: center; }
+  .policy b { display: block; font-size: 20px; }
+  .policy span { color: var(--muted); font-size: 14px; }
+  .dial { position: relative; width: min(78vw, 340px); aspect-ratio: 1; }
+  .dial svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--line); stroke-width: 6; }
+  .ring { fill: none; stroke: var(--cool); stroke-width: 6; stroke-linecap: round; transition: stroke .2s; }
+  button.big { position: absolute; inset: 9%; border-radius: 50%; border: 0; cursor: pointer;
+    color: var(--text); font: inherit; touch-action: none;
+    background: radial-gradient(circle at 50% 35%, #263044, #141821 70%);
+    box-shadow: 0 0 0 1px var(--line), 0 10px 40px rgba(0,0,0,.5);
+    transition: transform .08s ease, box-shadow .2s ease; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 4px; }
+  button.big.active { transform: scale(.96);
+    background: radial-gradient(circle at 50% 35%, #1f4a63, #10202c 70%);
+    box-shadow: 0 0 0 2px var(--cool), 0 0 60px rgba(95,211,255,.35); }
+  button.big:disabled { opacity: .45; cursor: not-allowed; }
+  .label { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .rate { font-size: 52px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+  .delay { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .row { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+  .row label { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); }
+  input[type=range] { width: 100%; height: 36px; accent-color: var(--cool); }
+  .tap { width: 100%; padding: 18px; border-radius: 14px; border: 1px solid var(--line);
+    background: var(--panel); color: var(--text); font: 600 18px system-ui, sans-serif; }
+  .tap:active { background: #1f2a3a; }
+  .note { color: var(--muted); font-size: 14px; text-align: center; min-height: 1.4em; }
+  .hidden { display: none !important; }
+  footer { color: var(--muted); font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Remapping Time</h1>
+  <div class="conn"><span class="dot" id="dot"></span><span id="connText">connecting…</span></div>
+</header>
+
+<main>
+  <div class="policy"><b id="policyName">–</b><span id="policyDesc"></span></div>
+
+  <div class="dial">
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <circle class="ring-bg" cx="50" cy="50" r="46"></circle>
+      <circle class="ring" id="ring" cx="50" cy="50" r="46" stroke-dasharray="0 289" style="opacity:0"></circle>
+    </svg>
+    <button class="big" id="hold" aria-label="Hold to slow time">
+      <span class="label" id="holdLabel">hold to slow</span>
+      <span class="rate" id="rate">1.00×</span>
+      <span class="delay" id="delay">delay 0.00 s</span>
+    </button>
+  </div>
+
+  <div class="row" id="strengthRow">
+    <label><span>Strength</span><span id="strengthVal">100%</span></label>
+    <input type="range" id="strength" min="0.1" max="1" step="0.05" value="1">
+  </div>
+
+  <div class="row hidden" id="scrubRow">
+    <label><span>◀ rewind</span><span>forward ▶</span></label>
+    <input type="range" id="scrub" min="-1" max="1" step="0.01" value="0">
+  </div>
+
+  <button class="tap hidden" id="pulse">Trigger</button>
+
+  <div class="note" id="note"></div>
+</main>
+
+<footer>Ring = how far behind real time their world is. On a keyboard, hold Space.</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const RING = 2 * Math.PI * 46;
+  let ws = null, schema = null, state = null, values = {};
+  let holding = false, scrub = 0, scrubbing = false, strength = 1;
+
+  function connect() {
+    ws = new WebSocket(`ws://${location.host}/ws`);
+    ws.onopen = () => { setConn(true); send({ type: 'hello', role: 'remote' }); };
+    ws.onclose = () => { setConn(false); release(); setTimeout(connect, 1000); };
+    ws.onerror = () => ws.close();
+    ws.onmessage = e => {
+      const m = JSON.parse(e.data);
+      if (m.type === 'schema') { schema = m; layout(); }
+      else if (m.type === 'state') { state = m; values = {}; (m.values || []).forEach(v => values[v.id] = v.v); layout(); update(); }
+    };
+  }
+  function send(o) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); }
+  function setConn(on) { $('dot').classList.toggle('on', on); $('connText').textContent = on ? 'connected' : 'reconnecting…'; }
+  function sendInput() { send({ type: 'input', hold: holding ? strength : 0, scrub }); }
+
+  // Inputs are refreshed continuously while active; the headset drops them if they stop arriving.
+  setInterval(() => { if (holding || scrubbing) sendInput(); }, 50);
+
+  function press(e) {
+    if ($('hold').disabled) return;
+    e.preventDefault();
+    holding = true; $('hold').classList.add('active');
+    if (navigator.vibrate) navigator.vibrate(12);
+    sendInput();
+  }
+  function release() {
+    if (!holding) return;
+    holding = false; $('hold').classList.remove('active');
+    sendInput(); setTimeout(sendInput, 60);
+  }
+  const btn = $('hold');
+  btn.addEventListener('pointerdown', e => { btn.setPointerCapture(e.pointerId); press(e); });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => btn.addEventListener(t, release));
+  btn.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('visibilitychange', () => { if (document.hidden) release(); });
+
+  // On a laptop: hold Space instead of the button; P fires a pulse where the policy supports it.
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) press(e); }
+    else if (e.code === 'KeyP' && !$('pulse').classList.contains('hidden')) $('pulse').click();
+  });
+  document.addEventListener('keyup', e => { if (e.code === 'Space') { e.preventDefault(); release(); } });
+  window.addEventListener('blur', release);
+
+  $('strength').addEventListener('input', e => { strength = +e.target.value; $('strengthVal').textContent = Math.round(strength * 100) + '%'; if (holding) sendInput(); });
+
+  const sc = $('scrub');
+  sc.addEventListener('input', () => { scrub = +sc.value; scrubbing = true; sendInput(); });
+  const springBack = () => { scrubbing = false; scrub = 0; sc.value = 0; sendInput(); };
+  sc.addEventListener('pointerup', springBack); sc.addEventListener('touchend', springBack); sc.addEventListener('change', springBack);
+
+  $('pulse').addEventListener('click', () => { send({ type: 'action', name: 'trigger' }); if (navigator.vibrate) navigator.vibrate(20); });
+
+  function layout() {
+    if (!schema || !state) return;
+    // Show the active preset, and only the controls its formulas actually use.
+    const i = (schema.presets || []).indexOf(state.preset);
+    $('policyName').textContent = state.preset || 'Remapping Time';
+    $('policyDesc').textContent = i >= 0 && schema.presetDescriptions ? schema.presetDescriptions[i] : '';
+    const fn = schema.function || {};
+    const canHold = !!fn.usesHold, showScrub = !!fn.usesScrub, showTrigger = !!fn.usesTrigger;
+    let note = '';
+    if (!canHold && !showScrub && !showTrigger)
+      note = fn.usesMotion || fn.usesWater ? 'Their own movements are in control right now. Just watch the ring.'
+                                          : 'Nothing to press for this preset. Just watch the ring.';
+    btn.disabled = !canHold;
+    $('holdLabel').textContent = canHold ? (showScrub ? 'hold to pause' : 'hold') : 'watching';
+    $('strengthRow').classList.toggle('hidden', !canHold || showScrub);
+    $('scrubRow').classList.toggle('hidden', !showScrub);
+    $('pulse').classList.toggle('hidden', !showTrigger);
+    $('note').textContent = note;
+    if (!canHold) release();
+  }
+
+  function update() {
+    const budget = Math.max(0.01, state.budget || 2);
+    const frac = Math.min(1, Math.max(0, state.delay / budget));
+    const ring = $('ring');
+    ring.setAttribute('stroke-dasharray', `${(frac * RING).toFixed(1)} ${RING.toFixed(1)}`);
+    ring.style.opacity = frac > 0.004 ? 1 : 0; // a zero-length dash still draws a round cap
+    const r = state.rate;
+    ring.style.stroke = r < 0 ? 'var(--violet)' : r < 0.97 ? 'var(--cool)' : r > 1.05 ? 'var(--warm)' : 'var(--cool)';
+    $('rate').textContent = (Math.abs(r) < 0.005 ? 0 : r).toFixed(2) + '×';
+    $('delay').textContent = `delay ${state.delay.toFixed(2)} s · ${state.phase}`;
+  }
+
+  connect();
+})();
+</script>
+</body>
+</html>

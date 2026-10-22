@@ -1,0 +1,15 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1045 &1
+EditorBuildSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Scenes:
+  - enabled: 1
+    path: Assets/RemappingTime/Scenes/RemappingTimeDemo.unity
+    guid: f51dfb4053f78ca44b4cc9122d22e198
+  m_configObjects:
+    Unity.XR.Oculus.Settings: {fileID: 11400000, guid: 20f6243bc0efc2f4bb62811049e6235f, type: 2}
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: a971eac5e950046e586c5e153e32d05c, type: 2}
+    com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 9165b3c3dec8d446f9b11d1a99b6e245, type: 2}
+  m_UseUCBPForAssetBundles: 0

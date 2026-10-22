@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remapping Time · Operator</title>
+<style>
+  :root {
+    --bg: #0b0d12; --panel: #121620; --panel2: #171c28; --line: #222a37; --text: #e6ebf3; --muted: #8592a6;
+    --cool: #5fd3ff; --warm: #ffb24d; --violet: #c49bff; --green: #6ee7a8; --ok: #4ade80; --bad: #f87171;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center;
+    padding: 12px 18px; background: rgba(11,13,18,.92); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 16px; margin: 0 8px 0 0; font-weight: 650; }
+  .chip { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .chip b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
+  .dot.on { background: var(--ok); }
+  .spacer { flex: 1; }
+  .url { color: var(--cool); text-decoration: none; font-weight: 600; }
+  main { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(360px, 1.15fr); gap: 16px; padding: 16px; max-width: 1500px; margin: 0 auto; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 12px; } }
+  .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .live { position: sticky; top: 66px; align-self: start; }
+  @media (max-width: 900px) { .live { position: static; order: -1; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+  .card h2 { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+  .policies { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .policy { text-align: left; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel2);
+    color: var(--text); cursor: pointer; font: inherit; }
+  .policy:hover { border-color: #33405a; }
+  .policy.active { border-color: var(--cool); box-shadow: inset 0 0 0 1px var(--cool); }
+  .policy b { display: block; font-size: 14px; }
+  .fx { display: grid; grid-template-columns: 56px 1fr; align-items: center; gap: 8px; margin-top: 8px; }
+  .fx label { color: var(--muted); font-weight: 600; text-align: right; font-family: ui-monospace, Consolas, monospace; }
+  input.code[type=text] { font-family: ui-monospace, Consolas, monospace; font-size: 14px; padding: 9px 10px; width: 100%; }
+  input.code.dirty { border-color: var(--warm); }
+  .fxerr { color: var(--bad); font-size: 12px; margin-left: 64px; min-height: 0; }
+  .vars { margin-top: 10px; }
+  .vars summary { cursor: pointer; color: var(--cool); }
+  .vars table { border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+  .vars td { padding: 3px 10px 3px 0; vertical-align: top; }
+  .vars td:first-child { font-family: ui-monospace, Consolas, monospace; color: var(--text); white-space: nowrap; }
+  .vars td:last-child { color: var(--muted); }
+  .curve { margin-top: 10px; }
+  .curve .head { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+  .curve .head b { color: var(--text); font-family: ui-monospace, Consolas, monospace; }
+  .curve canvas { width: 100%; height: 150px; display: block; background: var(--panel2); border-radius: 8px;
+    margin-top: 4px; cursor: crosshair; touch-action: none; }
+  .curve.unused { opacity: 0.55; }
+  .param .name.knob { cursor: pointer; }
+  .param .name.unused { opacity: 0.45; }
+  .card h2 small { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 6px; }
+  .hand.drive span:first-child { color: var(--text); font-weight: 650; }
+  .desc { color: var(--muted); font-size: 13px; margin-top: 10px; }
+  .rowf { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  select, input[type=text], input[type=password] { background: var(--panel2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 10px; font: inherit; min-width: 0; }
+  select { flex: 1; }
+  button.btn { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 12px; font: inherit; cursor: pointer; }
+  button.btn:hover { border-color: #3a4862; }
+  button.btn.primary { background: #17344a; border-color: #23506f; }
+  button.btn.danger { color: #ffb4b4; }
+  button.hold { width: 100%; padding: 14px; font-weight: 650; touch-action: none; user-select: none; }
+  button.hold.active { background: #1d4a63; border-color: var(--cool); }
+  .group { display: flex; flex-direction: column; gap: 12px; }
+  .param { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+  .param .name { cursor: default; }
+  .param .name small { color: var(--muted); display: block; font-size: 12px; line-height: 1.3; }
+  .param .val { font-variant-numeric: tabular-nums; color: var(--cool); font-weight: 600; text-align: right; min-width: 64px; }
+  .param input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--cool); }
+  .seg { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg button { flex: 1; min-width: 70px; padding: 6px 8px; border-radius: 7px; border: 1px solid var(--line);
+    background: var(--panel2); color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; }
+  .seg button.on { color: var(--text); border-color: var(--cool); background: #15283a; }
+  .switch { position: relative; width: 40px; height: 22px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch span { position: absolute; inset: 0; background: #2a3242; border-radius: 22px; cursor: pointer; transition: .15s; }
+  .switch span::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; border-radius: 50%; background: #cfd7e3; transition: .15s; }
+  .switch input:checked + span { background: #1f6f95; }
+  .switch input:checked + span::before { transform: translateX(18px); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .stat { background: var(--panel2); border-radius: 10px; padding: 10px 12px; }
+  .stat .k { color: var(--muted); font-size: 12px; }
+  .stat .v { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .phase { grid-column: 1 / -1; display: flex; justify-content: space-between; color: var(--muted); }
+  .phase b { color: var(--text); }
+  canvas { width: 100%; height: 240px; display: block; }
+  .legend { display: flex; gap: 14px; color: var(--muted); font-size: 12px; margin-top: 6px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+  .bars { display: grid; grid-template-columns: 110px 1fr 54px; gap: 8px 10px; align-items: center; font-size: 13px; }
+  .bar { height: 8px; background: #1d2431; border-radius: 4px; overflow: hidden; position: relative; }
+  .bar > div { position: absolute; top: 0; bottom: 0; left: 0; background: var(--cool); border-radius: 4px; }
+  .bar.center > div { left: 50%; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+  #log { max-height: 120px; overflow: auto; font-size: 12px; color: var(--muted); }
+  #log .error { color: var(--bad); }
+  .pin { display: none; }
+  .pin.show { display: flex; }
+  .muted { color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Remapping Time</h1>
+  <span class="chip"><span class="dot" id="dot"></span><span id="conn">connecting…</span></span>
+  <span class="chip">cam <b id="fps">–</b> Hz</span>
+  <span class="chip">battery <b id="battery">–</b></span>
+  <span class="chip">web clients <b id="clients">0</b></span>
+  <span class="chip">tracking <b id="source">–</b></span>
+  <span class="spacer"></span>
+  <span class="chip">visitors open <a class="url" id="remoteUrl" href="/" target="_blank">–</a></span>
+  <form class="pin rowf" id="pinForm"><input type="password" id="pin" placeholder="operator PIN" size="10"><button class="btn primary">Unlock</button></form>
+</header>
+
+<main>
+  <section class="col">
+    <div class="card" id="policyCard" style="display:none">
+      <h2>Policy</h2>
+      <div class="policies" id="policies"></div>
+      <div class="desc" id="policyDesc"></div>
+    </div>
+
+    <div class="card">
+      <h2>Presets<small>· ready-made time functions</small></h2>
+      <div class="rowf">
+        <select id="presetSelect"></select>
+        <button class="btn primary" id="presetApply">Apply</button>
+      </div>
+      <div class="desc" id="presetDesc"></div>
+      <div class="rowf" style="margin-top:8px">
+        <input type="text" id="presetName" placeholder="save current as…" style="flex:1">
+        <button class="btn" id="presetSave">Save</button>
+        <button class="btn danger" id="presetDelete" title="Delete the selected user preset">Delete</button>
+      </div>
+    </div>
+
+    <div class="card" id="fnCard">
+      <h2>Time function<small>· design u(t) and α(t)</small></h2>
+      <div class="fx"><label for="fxWhen" title="Trigger condition. While true: on = 1, ton counts up.">when</label><input type="text" id="fxWhen" class="code" spellcheck="false" autocomplete="off"></div>
+      <div class="fxerr" id="errWhen"></div>
+      <div class="fx"><label for="fxU" title="Injection: 0 = real time, 0.8 = 5× slower, 1 = freeze, >1 = rewind">u =</label><input type="text" id="fxU" class="code" spellcheck="false" autocomplete="off"></div>
+      <div class="fxerr" id="errU"></div>
+      <div class="fx"><label for="fxAlpha" title="Recovery: how strongly the delay is pulled back (catch-up ≈ 3/α seconds)">α =</label><input type="text" id="fxAlpha" class="code" spellcheck="false" autocomplete="off"></div>
+      <div class="fxerr" id="errAlpha"></div>
+      <div class="desc">
+        <b>u</b> adds delay: 0 = real time · 0.8 = 5× slower · 1 = freeze · &gt;1 = rewind.
+        <b>α</b> pulls it back: catch-up takes about 3/α seconds.
+        <code>c ? a : b</code> picks a when c is true. Press <b>Enter</b> to apply a formula.
+      </div>
+      <details class="vars"><summary>Variables and functions you can use</summary>
+        <table id="varTable"></table>
+        <div class="desc" id="fnList"></div>
+      </details>
+    </div>
+
+    <div class="card" id="curveCard">
+      <h2>Shapes<small>· drag points · double-click to add or remove · use as c1(x), c2(x) in the formulas</small></h2>
+      <div id="curves"></div>
+      <div class="desc">Try the <b>Draw your own</b> preset: u follows c1 while you hold (x = seconds since pressing), and α follows c2
+        after you let go (x = seconds since release). The dashed line shows where the formulas are right now.</div>
+    </div>
+
+    <div class="card">
+      <h2>Actions</h2>
+      <div class="rowf">
+        <button class="btn" data-action="live" title="Fast-forward to real time now (L)">Snap to live</button>
+        <button class="btn" data-action="trigger" title="Sets 'tap' to 0, for formulas that react to it (P / A button)">Trigger</button>
+        <button class="btn" data-action="moveWater" id="moveWater" title="Place the water block in front of the wearer">Move water in front</button>
+        <button class="btn" data-action="resetKnobs" title="Put k1, k2, k3 back to the preset's values">Reset knobs</button>
+      </div>
+      <div style="margin-top:10px"><button class="btn hold" id="hold">Hold (or hold Space): drives 'hold' in the formulas</button></div>
+      <div class="muted" style="margin-top:6px; font-size:12px">Keys: Space = hold · P = trigger · L = snap to live</div>
+    </div>
+
+    <div id="tunables" class="col"></div>
+  </section>
+
+  <section class="col live">
+    <div class="card">
+      <div class="stats">
+        <div class="stat"><div class="k">delay δ</div><div class="v" id="sDelay">–</div></div>
+        <div class="stat"><div class="k">rate r</div><div class="v" id="sRate">–</div></div>
+        <div class="stat"><div class="k">injection u</div><div class="v" id="sU">–</div></div>
+        <div class="stat"><div class="k">recovery α</div><div class="v" id="sAlpha">–</div></div>
+        <div class="phase"><span>phase <b id="sPhase">–</b></span><span id="sPreset" class="muted"></span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Last 10 seconds</h2>
+      <canvas id="chart"></canvas>
+      <div class="legend">
+        <span><i style="background:var(--cool)"></i>delay δ (left axis, 0 … budget)</span>
+        <span><i style="background:var(--warm)"></i>rate r (right axis, −1 … 4)</span>
+        <span><i style="background:var(--violet)"></i>u</span>
+        <span><i style="background:#ffffff55"></i>r = 1</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Inputs</h2>
+      <div class="bars">
+        <span>hold</span><div class="bar"><div id="bHold"></div></div><span class="num" id="nHold">0</span>
+        <span>remote hold</span><div class="bar"><div id="bRemote"></div></div><span class="num" id="nRemote">0</span>
+        <span>scrub</span><div class="bar center"><div id="bScrub"></div></div><span class="num" id="nScrub">0</span>
+        <span class="hand" id="lLeft"><span>left hand</span></span><div class="bar"><div id="bLeft" style="background:var(--green)"></div></div><span class="num" id="nLeft">–</span>
+        <span class="hand" id="lRight"><span>right hand</span></span><div class="bar"><div id="bRight" style="background:var(--green)"></div></div><span class="num" id="nRight">–</span>
+        <span>buffer used</span><div class="bar"><div id="bBuffer" style="background:var(--violet)"></div></div><span class="num" id="nBuffer">0</span>
+      </div>
+      <div class="muted" style="margin-top:8px" id="flags"></div>
+      <div class="muted" style="margin-top:4px; font-size:12px">Hand bars: bold = the hand driving motion effects · grey = outside the cameras' view (ignored).</div>
+    </div>
+
+    <div class="card"><h2>Diagnostics</h2><pre id="diag" style="margin:0; white-space:pre-wrap; font-size:12px; color:var(--muted)"></pre></div>
+    <div class="card"><h2>Messages<small>· what happened, newest first (read-only)</small></h2><div id="log"></div></div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+                  set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage unavailable */ } } };
+
+  let ws = null, schema = null, state = null;
+  const controls = {};          // id -> { update(v) }
+  const editing = {};           // id -> timestamp of last local edit
+  const pendingSend = {};       // id -> value (throttled)
+  const hist = { t: [], d: [], r: [], u: [] };
+
+  // ── Connection ──────────────────────────────────────────────────────────
+  function connect() {
+    ws = new WebSocket(`ws://${location.host}/ws`);
+    ws.onopen = () => { setConn(true); hello(); log('Connected to the headset.'); };
+    ws.onclose = () => { if (wasConnected) log('Lost connection, retrying…', 'error'); setConn(false); setTimeout(connect, 1000); };
+    ws.onerror = () => ws.close();
+    ws.onmessage = e => {
+      const m = JSON.parse(e.data);
+      if (m.type === 'schema') onSchema(m);
+      else if (m.type === 'state') onState(m);
+      else if (m.type === 'notice') { log(m.text, m.level); formulaNotice(m); }
+    };
+  }
+  const send = o => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
+  const hello = () => send({ type: 'hello', role: 'operator', pin: store.get('rt.pin') || '' });
+  let wasConnected = false;
+  function setConn(on) { wasConnected = on; $('dot').classList.toggle('on', on); $('conn').textContent = on ? 'connected' : 'reconnecting…'; }
+
+  // Messages: connection changes, policy/preset switches (from any source, including the headset menu),
+  // and notices from the headset such as "Saved preset" or errors. Kept to the last 50 lines.
+  function log(text, level = 'info') {
+    const box = $('log');
+    const d = document.createElement('div'); d.className = level;
+    d.textContent = `${new Date().toLocaleTimeString()}  ${text}`;
+    box.prepend(d);
+    while (box.childElementCount > 50) box.lastElementChild.remove();
+  }
+  let lastPolicy = null, lastPreset = null;
+
+  $('pinForm').addEventListener('submit', e => { e.preventDefault(); store.set('rt.pin', $('pin').value); hello(); });
+
+  // Throttle parameter changes to ~30 Hz per control.
+  setInterval(() => {
+    for (const id in pendingSend) { send({ type: 'set', id, value: pendingSend[id] }); delete pendingSend[id]; }
+  }, 33);
+  function setParam(id, v) { editing[id] = performance.now(); pendingSend[id] = v; }
+
+  // ── Schema → UI ─────────────────────────────────────────────────────────
+  function onSchema(m) {
+    schema = m;
+    const isOp = m.role === 'operator';
+    $('pinForm').classList.toggle('show', !isOp && m.pinRequired);
+    document.querySelectorAll('main button, main input, main select').forEach(el => { if (el.id !== 'hold') el.disabled = !isOp; });
+    if (m.url) { $('remoteUrl').textContent = m.url; $('remoteUrl').href = m.url; }
+
+    // Policy picker: only shown if custom policies were registered besides the time function.
+    $('policyCard').style.display = m.policies.length > 1 ? '' : 'none';
+    const pol = $('policies'); pol.innerHTML = '';
+    for (const p of m.policies) {
+      const b = document.createElement('button');
+      b.className = 'policy' + (p.id === m.activePolicy ? ' active' : '');
+      b.innerHTML = `<b></b>`; b.querySelector('b').textContent = p.name;
+      b.title = p.description;
+      b.disabled = !isOp;
+      b.onclick = () => send({ type: 'policy', id: p.id });
+      pol.appendChild(b);
+    }
+    const active = m.policies.find(p => p.id === m.activePolicy);
+    $('policyDesc').textContent = active ? active.description : '';
+
+    const sel = $('presetSelect'); sel.innerHTML = '';
+    m.presets.forEach((name, i) => {
+      const o = document.createElement('option'); o.value = o.textContent = name;
+      o.dataset.desc = (m.presetDescriptions || [])[i] || '';
+      if (name === m.activePreset) o.selected = true;
+      sel.appendChild(o);
+    });
+    showPresetDesc();
+
+    const fn = m.function;
+    const hasFn = !!(fn && fn.u);
+    $('fnCard').style.display = hasFn ? '' : 'none';
+    if (hasFn) {
+      setFormula('fxWhen', fn.when); setFormula('fxU', fn.u); setFormula('fxAlpha', fn.alpha);
+      $('moveWater').style.display = fn.usesWater ? '' : 'none';
+      const table = $('varTable'); table.innerHTML = '';
+      (fn.variables || []).forEach((v, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td></td><td></td>';
+        tr.children[0].textContent = v; tr.children[1].textContent = (fn.variableHelp || [])[i] || '';
+        table.appendChild(tr);
+      });
+      $('fnList').textContent = 'Functions: ' + (fn.functions || []).map(f => f + '()').join(', ') +
+        ' · operators: + − * / % ^, < <= > >= == !=, && || !, c ? a : b · constants: pi.';
+    }
+    $('curveCard').style.display = hasFn && fn.curves && fn.curves.length ? '' : 'none';
+    if (hasFn) buildCurves(fn.curves || [], isOp);
+    buildTunables(m.tunables, isOp);
+  }
+
+  // ── Shapes (drawable curves c1, c2) ─────────────────────────────────────
+  const curves = {};   // name -> { info, xs, ys, canvas, drag, lastSend, isOp }
+  function buildCurves(list, isOp) {
+    for (const info of list) {
+      let c = curves[info.name];
+      if (!c) {
+        const wrap = document.createElement('div'); wrap.className = 'curve';
+        wrap.innerHTML = '<div class="head"><span><b></b> <span class="lbl"></span></span><span class="use"></span></div><canvas></canvas>';
+        $('curves').appendChild(wrap);
+        c = curves[info.name] = { wrap, canvas: wrap.querySelector('canvas'), drag: -1, lastSend: 0 };
+        attachCurveEvents(info.name);
+      }
+      c.info = info; c.isOp = isOp;
+      c.wrap.querySelector('b').textContent = info.name + '(x)';
+      c.wrap.querySelector('.lbl').textContent = '· ' + info.label + ` · x 0–${info.xMax} s, y ${info.yMin}–${info.yMax}`;
+      c.wrap.querySelector('.use').textContent = info.used ? 'used by the formulas' : 'not used by the current formulas';
+      c.wrap.classList.toggle('unused', !info.used);
+      if (c.drag < 0) { c.xs = info.xs.slice(); c.ys = info.ys.slice(); }   // never overwrite a curve being dragged
+    }
+  }
+
+  function curveGeom(c) {
+    const w = c.canvas.clientWidth, h = c.canvas.clientHeight, pad = { l: 34, r: 10, t: 10, b: 20 };
+    const W = w - pad.l - pad.r, H = h - pad.t - pad.b, i = c.info;
+    return {
+      w, h, pad, W, H,
+      X: x => pad.l + x / i.xMax * W, Y: y => pad.t + H - (y - i.yMin) / (i.yMax - i.yMin) * H,
+      invX: px => Math.min(i.xMax, Math.max(0, (px - pad.l) / W * i.xMax)),
+      invY: py => Math.min(i.yMax, Math.max(i.yMin, i.yMin + (pad.t + H - py) / H * (i.yMax - i.yMin))),
+    };
+  }
+
+  function sendCurve(name, force) {
+    const c = curves[name], now = performance.now();
+    if (!force && now - c.lastSend < 100) return;   // ~10 Hz while dragging
+    c.lastSend = now;
+    send({ type: 'curve', id: name, xs: c.xs, ys: c.ys });
+  }
+
+  function attachCurveEvents(name) {
+    const c = curves[name], cv = c.canvas;
+    const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    const hit = (px, py) => {
+      const g = curveGeom(c);
+      for (let k = 0; k < c.xs.length; k++) if (Math.hypot(g.X(c.xs[k]) - px, g.Y(c.ys[k]) - py) < 11) return k;
+      return -1;
+    };
+    cv.addEventListener('pointerdown', e => {
+      if (!c.isOp) return;
+      const [px, py] = pos(e); c.drag = hit(px, py);
+      if (c.drag >= 0) { try { cv.setPointerCapture(e.pointerId); } catch (err) { /* not capturable (e.g. synthetic) */ } }
+    });
+    cv.addEventListener('pointermove', e => {
+      if (c.drag < 0) return;
+      const g = curveGeom(c), [px, py] = pos(e), k = c.drag;
+      // Keep points in order: a point can't pass its neighbours.
+      const lo = k > 0 ? c.xs[k - 1] : 0, hi = k < c.xs.length - 1 ? c.xs[k + 1] : c.info.xMax;
+      c.xs[k] = +Math.min(hi, Math.max(lo, g.invX(px))).toFixed(3);
+      c.ys[k] = +g.invY(py).toFixed(3);
+      sendCurve(name, false);
+    });
+    const end = () => { if (c.drag >= 0) { c.drag = -1; sendCurve(name, true); } };
+    cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+    cv.addEventListener('dblclick', e => {
+      if (!c.isOp) return;
+      const [px, py] = pos(e), k = hit(px, py), g = curveGeom(c);
+      if (k >= 0) { if (c.xs.length > 1) { c.xs.splice(k, 1); c.ys.splice(k, 1); } }
+      else {
+        const x = g.invX(px), y = g.invY(py);
+        let at = c.xs.findIndex(v => v > x); if (at < 0) at = c.xs.length;
+        c.xs.splice(at, 0, +x.toFixed(3)); c.ys.splice(at, 0, +y.toFixed(3));
+      }
+      sendCurve(name, true);
+    });
+  }
+
+  function drawCurves() {
+    for (const name in curves) {
+      const c = curves[name]; if (!c.info || !c.xs) continue;
+      const cv = c.canvas, dpr = window.devicePixelRatio || 1, g = curveGeom(c);
+      if (cv.width !== g.w * dpr || cv.height !== g.h * dpr) { cv.width = g.w * dpr; cv.height = g.h * dpr; }
+      const x = cv.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, g.w, g.h);
+      x.font = '11px system-ui'; x.fillStyle = '#8592a6'; x.strokeStyle = '#2a3242'; x.lineWidth = 1;
+      for (let s = 0; s <= c.info.xMax; s++) { x.beginPath(); x.moveTo(g.X(s), g.pad.t); x.lineTo(g.X(s), g.pad.t + g.H); x.stroke(); x.fillText(s + 's', g.X(s) - 6, g.h - 5); }
+      x.textAlign = 'right'; x.fillText(c.info.yMax, g.pad.l - 4, g.pad.t + 9); x.fillText(c.info.yMin, g.pad.l - 4, g.pad.t + g.H); x.textAlign = 'left';
+      // Playhead: where the formulas are now (ton while triggered, toff after release).
+      if (state) {
+        const px = Math.min(c.info.xMax, state.fnOn ? state.fnTon : state.fnToff);
+        x.setLineDash([4, 4]); x.strokeStyle = state.fnOn ? '#5fd3ff' : '#ffb24d';
+        x.beginPath(); x.moveTo(g.X(px), g.pad.t); x.lineTo(g.X(px), g.pad.t + g.H); x.stroke(); x.setLineDash([]);
+        x.fillStyle = x.strokeStyle; x.fillText(state.fnOn ? 'ton' : 'toff', Math.min(g.X(px) + 4, g.w - 30), g.pad.t + 10);
+      }
+      // The curve: flat before the first and after the last point.
+      x.strokeStyle = name === 'c1' ? '#c49bff' : '#6ee7a8'; x.lineWidth = 2.2; x.beginPath();
+      x.moveTo(g.X(0), g.Y(c.ys[0]));
+      c.xs.forEach((v, k) => x.lineTo(g.X(v), g.Y(c.ys[k])));
+      x.lineTo(g.X(c.info.xMax), g.Y(c.ys[c.ys.length - 1])); x.stroke();
+      x.fillStyle = '#e6ebf3';
+      c.xs.forEach((v, k) => { x.beginPath(); x.arc(g.X(v), g.Y(c.ys[k]), k === c.drag ? 6 : 4.5, 0, Math.PI * 2); x.fill(); });
+    }
+    requestAnimationFrame(drawCurves);
+  }
+  requestAnimationFrame(drawCurves);
+
+  // ── Formulas ────────────────────────────────────────────────────────────
+  const formulaFields = { fxWhen: 'when', fxU: 'u', fxAlpha: 'alpha' };
+  const errorBox = { when: 'errWhen', u: 'errU', alpha: 'errAlpha', 'α': 'errAlpha' };
+
+  // Fill from the headset, but never overwrite what you are typing.
+  function setFormula(id, text) {
+    const el = $(id);
+    if (document.activeElement === el && el.classList.contains('dirty')) return;
+    el.value = text || '';
+    el.dataset.applied = el.value;
+    el.classList.remove('dirty');
+  }
+  for (const [id, which] of Object.entries(formulaFields)) {
+    const el = $(id);
+    el.addEventListener('input', () => el.classList.toggle('dirty', el.value !== el.dataset.applied));
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); send({ type: 'expr', id: which, name: el.value }); }
+      if (e.key === 'Escape') { el.value = el.dataset.applied || ''; el.classList.remove('dirty'); }
+    });
+  }
+  // The headset answers each formula with "u = …" (applied) or "u: error message".
+  function formulaNotice(m) {
+    const match = /^(when|u|α)( =|:)/.exec(m.text || '');
+    if (!match) return;
+    const box = $(errorBox[match[1]]);
+    box.textContent = m.level === 'error' ? m.text.slice(match[0].length).trim() : '';
+  }
+
+  function showPresetDesc() {
+    const o = $('presetSelect').selectedOptions[0];
+    $('presetDesc').textContent = o ? o.dataset.desc : '';
+  }
+  $('presetSelect').addEventListener('change', showPresetDesc);
+
+  function buildTunables(list, isOp) {
+    const root = $('tunables'); root.innerHTML = '';
+    for (const k in controls) delete controls[k];
+    const groups = {};
+    for (const t of list) {
+      if (t.id === 'engine.policy' || t.id === 'engine.preset') continue; // dedicated UI above
+      (groups[t.group] = groups[t.group] || []).push(t);
+    }
+    // Effects follow the design space of time remapping; the rest are setup.
+    const order = [
+      ['Policy', 'Knobs', 'k1, k2, k3 inside the formulas · click a name to rename it'],
+      ['Water', 'Water', 'the virtual water block'],
+      ['Representation', 'Representation', 'how the remapped world is shown'],
+      ['Scope', 'Scope', 'where in view time is remapped'],
+      ['Transparency', 'Transparency', 'how visibly the remapping is signalled'],
+      ['Display', 'Display', 'rendering and head reprojection'],
+      ['Tracking', 'Tracking', 'which hands drive motion effects'],
+      ['Engine', 'Engine', ''], ['HUD', 'HUD', ''], ['Menu', 'In-headset menu', ''],
+    ];
+    for (const g of Object.keys(groups)) if (!order.some(o => o[0] === g)) order.push([g, g, '']);
+    for (const [g, title, sub] of order) {
+      if (!groups[g]) continue;
+      const card = document.createElement('div'); card.className = 'card';
+      card.innerHTML = `<h2></h2><div class="group"></div>`;
+      card.querySelector('h2').textContent = title;
+      if (sub) { const s = document.createElement('small'); s.textContent = '· ' + sub; card.querySelector('h2').appendChild(s); }
+      const box = card.querySelector('.group');
+      for (const t of groups[g]) box.appendChild(makeControl(t, isOp));
+      delete groups[g];
+      root.appendChild(card);
+    }
+  }
+
+  const fmt = (t, v) => {
+    if (t.options && t.options.length) { const o = t.options[Math.round(v)]; return o !== undefined ? o : v; }
+    const d = t.step >= 1 ? 0 : t.step >= 0.1 ? 1 : t.step >= 0.01 ? 2 : 3;
+    return v.toFixed(d) + (t.unit ? ' ' + t.unit : '');
+  };
+
+  function makeControl(t, isOp) {
+    const el = document.createElement('div'); el.className = 'param';
+    const name = document.createElement('div'); name.className = 'name';
+    name.textContent = t.label; name.title = (t.help ? t.help + '\n' : '') + 'Double-click to reset to default.';
+    if (t.help) { const s = document.createElement('small'); s.textContent = t.help; name.appendChild(s); }
+    name.ondblclick = () => { if (isOp) { setParam(t.id, t.def); controls[t.id].update(t.def, true); } };
+    // Knobs (fn.k1..k3): click the name to rename it; unused knobs are dimmed.
+    const knob = /^fn\.k([123])$/.exec(t.id);
+    if (knob) {
+      name.classList.add('knob');
+      if (/unused/.test(t.label)) name.classList.add('unused');
+      name.title = 'Click to rename. Double-click to reset the value.';
+      name.onclick = () => {
+        if (!isOp) return;
+        const current = t.label.includes('·') ? t.label.split('·')[1].trim() : '';
+        const label = prompt(`Name for knob k${knob[1]} (what it controls in your formulas):`, current);
+        if (label !== null) send({ type: 'knobLabel', id: knob[1], name: label });
+      };
+    }
+    el.appendChild(name);
+
+    const isToggle = t.options && t.options.length === 2 && t.options[0] === 'Off' && t.options[1] === 'On';
+    if (isToggle) {
+      const lab = document.createElement('label'); lab.className = 'switch';
+      lab.innerHTML = '<input type="checkbox"><span></span>';
+      const cb = lab.querySelector('input'); cb.disabled = !isOp;
+      cb.onchange = () => setParam(t.id, cb.checked ? 1 : 0);
+      el.appendChild(lab);
+      controls[t.id] = { update(v) { cb.checked = v > 0.5; } };
+    } else if (t.options && t.options.length) {
+      el.appendChild(document.createElement('span'));
+      const seg = document.createElement('div'); seg.className = 'seg';
+      const btns = t.options.map((o, i) => {
+        const b = document.createElement('button'); b.textContent = o; b.disabled = !isOp;
+        b.onclick = () => { setParam(t.id, i); upd(i); };
+        seg.appendChild(b); return b;
+      });
+      const upd = v => btns.forEach((b, i) => b.classList.toggle('on', i === Math.round(v)));
+      el.appendChild(seg);
+      controls[t.id] = { update: upd };
+    } else {
+      // The slider moves over integer step indices, not raw floats: the headset's float32 values
+      // (e.g. step 0.0500000007) would otherwise make the browser snap max/min out of reach.
+      const val = document.createElement('div'); val.className = 'val';
+      const r = document.createElement('input'); r.type = 'range';
+      const n = Math.max(1, Math.round((t.max - t.min) / t.step));
+      const toValue = i => i <= 0 ? t.min : i >= n ? t.max : +(t.min + i * (t.max - t.min) / n).toFixed(6);
+      const toIndex = v => Math.min(n, Math.max(0, Math.round((v - t.min) / (t.max - t.min) * n)));
+      r.min = 0; r.max = n; r.step = 1; r.disabled = !isOp;
+      r.oninput = () => { const v = toValue(+r.value); val.textContent = fmt(t, v); setParam(t.id, v); };
+      el.appendChild(val); el.appendChild(r);
+      controls[t.id] = { update(v) { r.value = toIndex(v); val.textContent = fmt(t, v); } };
+    }
+    controls[t.id].update(t.value);
+    return el;
+  }
+
+  // ── State → live view ───────────────────────────────────────────────────
+  function onState(s) {
+    state = s;
+    const now = performance.now();
+    for (const p of s.values || []) {
+      const c = controls[p.id];
+      if (c && !(editing[p.id] && now - editing[p.id] < 700)) c.update(p.v);
+    }
+    if (schema && s.policy !== schema.activePolicy) { schema.activePolicy = s.policy; }
+    document.querySelectorAll('.policy').forEach((b, i) => b.classList.toggle('active', schema && schema.policies[i] && schema.policies[i].id === s.policy));
+
+    $('sDelay').textContent = s.delay.toFixed(2) + ' s';
+    $('sRate').textContent = s.rate.toFixed(2) + '×';
+    $('sRate').style.color = s.rate < 0 ? 'var(--violet)' : s.rate < 0.97 ? 'var(--cool)' : s.rate > 1.05 ? 'var(--warm)' : 'var(--text)';
+    $('sU').textContent = s.u.toFixed(2);
+    $('sAlpha').textContent = s.alpha.toFixed(2);
+    $('sPhase').textContent = s.phase || '–';
+    $('sPreset').textContent = s.preset ? 'preset: ' + s.preset : '';
+    $('fps').textContent = s.fps.toFixed(0);
+    $('battery').textContent = s.battery >= 0 ? Math.round(s.battery * 100) + '%' : '–';
+    $('clients').textContent = s.clients;
+    $('source').textContent = s.tracked ? s.source : 'lost';
+
+    bar('bHold', 'nHold', s.hold, 1, s.hold.toFixed(2));
+    bar('bRemote', 'nRemote', s.remoteHold, 1, s.remoteHold.toFixed(2));
+    const sc = $('bScrub'); sc.style.width = Math.abs(s.scrub) * 50 + '%'; sc.style.left = s.scrub < 0 ? (50 - Math.abs(s.scrub) * 50) + '%' : '50%';
+    $('nScrub').textContent = s.scrub.toFixed(2);
+    for (const [side, h] of [['Left', s.left], ['Right', s.right]]) {
+      const tracked = h && h.tracked;
+      bar('b' + side, 'n' + side, tracked ? h.speed : 0, 3, tracked ? h.speed.toFixed(1) + ' m/s' : 'not tracked');
+      $('b' + side).style.background = tracked && !h.inView ? '#4b5566' : 'var(--green)'; // grey = out of view, ignored
+      $('l' + side).firstElementChild.textContent = tracked && h.device ? h.device : side.toLowerCase() + ' hand';
+      $('l' + side).classList.toggle('drive', !!(tracked && s.source === h.device));
+    }
+    bar('bBuffer', 'nBuffer', s.delay, Math.max(0.01, s.budget), Math.round(100 * s.delay / Math.max(0.01, s.budget)) + '%');
+
+    if (lastPolicy !== null && s.policy !== lastPolicy) log(`Policy → ${policyName(s.policy)}`);
+    if (lastPreset !== null && s.preset !== lastPreset && s.preset) log(`Preset → ${s.preset}`);
+    lastPolicy = s.policy; lastPreset = s.preset;
+    $('flags').textContent = [s.bypass ? 'BYPASS (comparing with live)' : '',
+      s.status ? 'camera: ' + s.status : ''].filter(Boolean).join('  ·  ');
+    $('diag').textContent = s.diag || '';
+
+    hist.t.push(s.t); hist.d.push(s.delay); hist.r.push(s.rate); hist.u.push(s.u);
+    while (hist.t.length && hist.t[0] < s.t - 10) for (const k in hist) hist[k].shift();
+  }
+  function policyName(id) { const p = schema && schema.policies.find(x => x.id === id); return p ? p.name : id; }
+  function bar(id, nid, v, max, text) { $(id).style.width = Math.min(100, Math.max(0, 100 * v / max)) + '%'; $(nid).textContent = text; }
+
+  // ── Chart ───────────────────────────────────────────────────────────────
+  const cv = $('chart'), ctx = cv.getContext('2d');
+  function draw() {
+    const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+    if (cv.width !== w * dpr || cv.height !== h * dpr) { cv.width = w * dpr; cv.height = h * dpr; }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const pad = { l: 34, r: 30, t: 8, b: 18 }, W = w - pad.l - pad.r, H = h - pad.t - pad.b;
+    const budget = state ? Math.max(0.01, state.budget) : 2;
+    const tEnd = hist.t.length ? hist.t[hist.t.length - 1] : 0, tStart = tEnd - 10;
+    const X = t => pad.l + (t - tStart) / 10 * W;
+    const Yd = d => pad.t + H - (d / budget) * H;
+    const Yr = r => pad.t + H - ((r + 1) / 5) * H;
+
+    ctx.strokeStyle = '#222a37'; ctx.lineWidth = 1; ctx.fillStyle = '#8592a6'; ctx.font = '11px system-ui';
+    for (let i = 0; i <= 4; i++) { const y = pad.t + H * i / 4; ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + W, y); ctx.stroke(); }
+    ctx.textAlign = 'right'; ctx.fillText(budget.toFixed(1) + 's', pad.l - 4, pad.t + 9); ctx.fillText('0', pad.l - 4, pad.t + H);
+    ctx.textAlign = 'left'; ctx.fillText('4×', pad.l + W + 4, pad.t + 9); ctx.fillText('−1', pad.l + W + 4, pad.t + H);
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = '#ffffff44';
+    ctx.beginPath(); ctx.moveTo(pad.l, Yr(1)); ctx.lineTo(pad.l + W, Yr(1)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillText('1×', pad.l + W + 4, Yr(1) + 4);
+
+    const line = (arr, Y, color, width) => {
+      if (hist.t.length < 2) return;
+      ctx.strokeStyle = color; ctx.lineWidth = width; ctx.beginPath();
+      hist.t.forEach((t, i) => { const x = X(t), y = Y(arr[i]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+      ctx.stroke();
+    };
+    ctx.save();
+    ctx.beginPath(); ctx.rect(pad.l, pad.t - 1, W, H + 2); ctx.clip(); // catch-up spikes can exceed 4×
+    line(hist.u, Yr, '#c49bff', 1.2);
+    line(hist.r, Yr, '#ffb24d', 2);
+    line(hist.d, Yd, '#5fd3ff', 2.2);
+    ctx.restore();
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+
+  // ── Buttons ─────────────────────────────────────────────────────────────
+  document.querySelectorAll('[data-action]').forEach(b => b.onclick = () => send({ type: 'action', name: b.dataset.action }));
+  $('presetApply').onclick = () => send({ type: 'preset', name: $('presetSelect').value });
+  $('presetSave').onclick = () => { const n = $('presetName').value.trim(); if (n) send({ type: 'savePreset', name: n }); };
+  $('presetDelete').onclick = () => { const n = $('presetSelect').value; if (n && confirm(`Delete preset "${n}"? Built-in presets cannot be deleted.`)) send({ type: 'deletePreset', name: n }); };
+
+  const hold = $('hold'); let holding = false;
+  const sendHold = () => send({ type: 'input', hold: holding ? 1 : 0, scrub: 0 });
+  setInterval(() => { if (holding) sendHold(); }, 50);
+  hold.addEventListener('pointerdown', e => { hold.setPointerCapture(e.pointerId); holding = true; hold.classList.add('active'); sendHold(); });
+  const releaseHold = () => { if (!holding) return; holding = false; hold.classList.remove('active'); sendHold(); };
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => hold.addEventListener(t, releaseHold));
+
+  // Keyboard, so a visitor can drive the wearer's time from the laptop:
+  // Space (hold) = slow, P = pulse / freeze, L = snap to live. Ignored while typing in a text field.
+  const typing = e => e.target && (e.target.type === 'text' || e.target.type === 'password' || e.target.tagName === 'SELECT');
+  document.addEventListener('keydown', e => {
+    if (typing(e)) return;
+    if (e.code === 'Space') {
+      e.preventDefault(); // also stops Space from "clicking" a focused button
+      if (!e.repeat) { holding = true; hold.classList.add('active'); sendHold(); }
+    }
+    else if (e.repeat) return;
+    else if (e.code === 'KeyP') send({ type: 'action', name: 'trigger' });
+    else if (e.code === 'KeyL') send({ type: 'action', name: 'live' });
+  });
+  document.addEventListener('keyup', e => { if (e.code === 'Space' && !typing(e)) { e.preventDefault(); releaseHold(); } });
+  window.addEventListener('blur', releaseHold);
+
+  connect();
+})();
+</script>
+</body>
+</html>
