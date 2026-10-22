@@ -37,3 +37,7 @@ Thumbs.db
 
 # Unity tooling
 /.utmp/
+
+# Plastic SCM leftovers
+*.private.0
+*.private
