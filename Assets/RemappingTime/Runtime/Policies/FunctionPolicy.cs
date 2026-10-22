@@ -32,7 +32,7 @@ namespace RemappingTime
         /// <summary>Variables usable in the formulas, in slot order.</summary>
         public static readonly string[] Variables =
         {
-            "t", "d", "B", "hold", "scrub", "speed", "lspeed", "rspeed", "depth", "inzone", "on", "ton", "toff", "tap", "k1", "k2", "k3",
+            "t", "d", "B", "hold", "speed", "lspeed", "rspeed", "depth", "inzone", "on", "ton", "toff", "tap", "k1", "k2", "k3",
             "uon", "aon", "aoff",
         };
 
@@ -42,7 +42,6 @@ namespace RemappingTime
             "current delay δ: how far behind real time the view is (s)",
             "buffer budget: the largest possible delay (s)",
             "hold input 0–1 (right trigger, Space on the web page, or a phone)",
-            "scrub input −1…1 (right thumbstick or web slider)",
             "speed of the fastest hand inside the cameras' view (m/s; 0 if none)",
             "left hand speed, inside the view (m/s)",
             "right hand speed, inside the view (m/s)",
@@ -56,9 +55,9 @@ namespace RemappingTime
             "u when triggered (slider)", "α when triggered (slider)", "α when released (slider)",
         };
 
-        private const int T = 0, D = 1, Budget = 2, Hold = 3, Scrub = 4, Speed = 5, LSpeed = 6, RSpeed = 7,
-                          Depth = 8, InZone = 9, On = 10, TOn = 11, TOff = 12, Tap = 13, K1 = 14, K2 = 15, K3 = 16,
-                          UOn = 17, AOn = 18, AOff = 19;
+        private const int T = 0, D = 1, Budget = 2, Hold = 3, Speed = 4, LSpeed = 5, RSpeed = 6,
+                          Depth = 7, InZone = 8, On = 9, TOn = 10, TOff = 11, Tap = 12, K1 = 13, K2 = 14, K3 = 15,
+                          UOn = 16, AOn = 17, AOff = 18;
 
         /// <summary>Self-defined variables k1–k3: free numbers a preset names and uses inside its formulas.</summary>
         public readonly Tunable Knob1, Knob2, Knob3;
@@ -127,7 +126,6 @@ namespace RemappingTime
 
         public override bool UsesZone => Reads(Depth) || Reads(InZone);
         public bool UsesHold => Reads(Hold);
-        public bool UsesScrub => Reads(Scrub);
         public bool UsesTap => Reads(Tap);
         public bool UsesMotion => Reads(Speed) || Reads(LSpeed) || Reads(RSpeed);
         public bool UsesCurve(string name) => (_when?.Calls(name) ?? false) || (_u?.Calls(name) ?? false) || (_alpha?.Calls(name) ?? false);
@@ -192,7 +190,6 @@ namespace RemappingTime
             _vars[D] = (float)ctx.Delay;
             _vars[Budget] = ctx.MaxDelay;
             _vars[Hold] = ctx.Inputs.Hold;
-            _vars[Scrub] = ctx.Inputs.Scrub;
             _vars[Speed] = SpeedInView(ctx.Motion);
             _vars[LSpeed] = SpeedInView(ctx.Left);
             _vars[RSpeed] = SpeedInView(ctx.Right);

@@ -10,8 +10,8 @@ namespace RemappingTime.Remote
     ///
     /// Two pages are served from the headset:
     /// <list type="bullet">
-    /// <item><c>http://&lt;headset-ip&gt;:8080/</c>: the <b>remote</b>. A big hold button (and a scrub slider for
-    /// replay policies) for onlookers, so a visitor can slow the wearer's world from their phone.
+    /// <item><c>http://&lt;headset-ip&gt;:8080/</c>: the <b>remote</b>. A big hold button (and a Trigger button
+    /// when the formulas use it) for onlookers, so a visitor can slow the wearer's world from their phone.
     /// Remote clients can only send inputs and fire pulses.</item>
     /// <item><c>http://&lt;headset-ip&gt;:8080/operator</c>: the <b>operator</b> console. Pick policies and presets,
     /// tune every parameter, and watch live telemetry (δ, r, u, α). Protected by an optional PIN.</item>
@@ -152,7 +152,7 @@ namespace RemappingTime.Remote
                     break;
 
                 case "input":
-                    engine.Inputs?.SetRemoteInput(client, m.hold, m.scrub);
+                    engine.Inputs?.SetRemoteInput(client, m.hold);
                     break;
 
                 case "action":
@@ -227,7 +227,7 @@ namespace RemappingTime.Remote
                     when = fn.WhenSource, u = fn.USource, alpha = fn.AlphaSource,
                     variables = FunctionPolicy.Variables, variableHelp = FunctionPolicy.VariableHelp,
                     functions = Expression.FunctionNames,
-                    usesHold = fn.UsesHold, usesScrub = fn.UsesScrub, usesTrigger = fn.UsesTap,
+                    usesHold = fn.UsesHold, usesTrigger = fn.UsesTap,
                     usesWater = fn.UsesZone, usesMotion = fn.UsesMotion,
                     curves = Array.ConvertAll(fn.Curves, c => new CurveInfo
                     {
@@ -239,7 +239,12 @@ namespace RemappingTime.Remote
             }
 
             var presetDescriptions = new string[engine.Presets.All.Count];
-            for (int i = 0; i < presetDescriptions.Length; i++) presetDescriptions[i] = engine.Presets.All[i].description ?? "";
+            var presetCategories = new string[presetDescriptions.Length];
+            for (int i = 0; i < presetDescriptions.Length; i++)
+            {
+                presetDescriptions[i] = engine.Presets.All[i].description ?? "";
+                presetCategories[i] = engine.Presets.All[i].Category;
+            }
 
             var tunables = new List<TunableInfo>();
             foreach (Tunable t in engine.AllTunables())
@@ -266,6 +271,7 @@ namespace RemappingTime.Remote
                 tunables = tunables.ToArray(),
                 presets = engine.Presets.Names(),
                 presetDescriptions = presetDescriptions,
+                presetCategories = presetCategories,
                 function = function,
                 actions = role == Role.Operator ? OperatorActions : RemoteActions,
             };
@@ -302,7 +308,6 @@ namespace RemappingTime.Remote
                 fps = engine.Capture != null ? engine.Capture.CaptureFps : 0f,
                 hold = ctx.Inputs.Hold,
                 remoteHold = ctx.Inputs.RemoteHold,
-                scrub = ctx.Inputs.Scrub,
                 bypass = engine.Inputs != null && engine.Inputs.Bypass,
                 tracked = ctx.Motion.Tracked,
                 inView = ctx.Motion.InView,

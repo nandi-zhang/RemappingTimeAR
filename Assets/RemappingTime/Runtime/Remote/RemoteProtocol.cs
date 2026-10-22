@@ -16,7 +16,6 @@ namespace RemappingTime.Remote
         public string id;     // set: tunable id; policy: policy id; expr: "when" | "u" | "alpha"; knobLabel: "1".."3"
         public float value;   // set
         public float hold;    // input: 0..1
-        public float scrub;   // input: -1..1
         public string name;   // action name, preset name, formula text (expr) or knob name (knobLabel)
         public float[] xs, ys; // curve: the new points (id = "c1" | "c2")
     }
@@ -46,7 +45,7 @@ namespace RemappingTime.Remote
         public string when, u, alpha;
         public string[] variables, variableHelp, functions;
         // What the formulas read, so pages can show the right controls (e.g. a hold button only if 'hold' is used).
-        public bool usesHold, usesScrub, usesTrigger, usesWater, usesMotion;
+        public bool usesHold, usesTrigger, usesWater, usesMotion;
         public CurveInfo[] curves;
     }
 
@@ -84,6 +83,7 @@ namespace RemappingTime.Remote
         public TunableInfo[] tunables;
         public string[] presets;
         public string[] presetDescriptions;
+        public string[] presetCategories;   // per preset: "main", "advanced" or "saved"
         public FunctionInfo function;
         public string[] actions;
     }
@@ -113,7 +113,6 @@ namespace RemappingTime.Remote
         public float fps;        // camera capture rate
         public float hold;       // combined hold input
         public float remoteHold;
-        public float scrub;
         public bool bypass;
         public bool tracked;
         public bool inView;      // tracked point inside the cameras' view (where remapping is visible)

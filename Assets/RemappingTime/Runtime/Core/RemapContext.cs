@@ -4,8 +4,7 @@ namespace RemappingTime
 {
     /// <summary>
     /// User-facing control inputs, merged from the headset controllers and any connected web clients.
-    /// Policies decide what these mean (e.g. "hold" slows time in <see cref="HoldPolicy"/>, pauses in
-    /// <see cref="ScrubPolicy"/>).
+    /// The formulas decide what these mean (e.g. "hold" slows time in the Hold to slow preset).
     /// </summary>
     public struct RemapInputs
     {
@@ -15,8 +14,6 @@ namespace RemappingTime
         public float LocalHold;
         /// <summary>Hold strength from web clients only (e.g. a visitor's phone).</summary>
         public float RemoteHold;
-        /// <summary>Scrub axis in [−1, 1] (thumbstick or web slider).</summary>
-        public float Scrub;
         /// <summary>True on the frame an "action" was requested (A button or web). Policies may use it to fire a pulse.</summary>
         public bool Action;
         /// <summary>True on the frame a "snap to live" was requested (B button or web).</summary>

@@ -35,7 +35,7 @@ response to events**. That is what a *policy* does.
 | **Head reprojection** | Every buffered frame stores the pose of the camera that captured it and is drawn *where it was captured*. Rotation is fully compensated and translation is exact at a chosen depth, so the past stays put in the world as you move your head. Toggle it off to compare with a head-locked image. |
 | **Soft canvas** | Feathered edges blend into the live passthrough. When nothing is remapped the canvas fades out entirely, leaving the full-quality system passthrough. |
 | **Smooth slow motion** | Neighbouring frames are cross-faded, so 5× slow motion is not a 12 fps slideshow. |
-| **u(t) and α(t) as formulas** | Type the trigger, u and α as formulas on the operator page (e.g. `on ? k1 * smoothstep(0, k3, ton) : 0`) and see the result instantly. 22 presets cover hold-to-slow, freeze, rewind, referee replay, motion slow-mo, hitstop, water, oscillation and more. |
+| **u(t) and α(t) as formulas** | Type the trigger, u and α as formulas on the operator page (e.g. `on ? uon * smoothstep(0, k1, ton) : 0`) and see the result instantly. 10 main presets (hold to slow, echo trails, time lens, ghost, motion slow-mo, time wobble, constant u and α, water, honey) plus 11 advanced ones (freeze, rewind, hitstop, drawn shapes and more). |
 | **Effects, organised by the design space** | *Representation*: replace, ghost (semi-transparent) or echo trails (chronophotography). *Scope*: the whole view or a *time lens* around your hand. *Transparency*: speed colour and an edge glow signal the remapping (one toggle), or switch them off for low-transparency designs. |
 | **Timeline gallery** | Several presets side by side on floating screens, all fed by the same live camera and reacting to the same input. |
 | **Water / honey** | A 35 cm refractive block of virtual water (or amber honey), reacting 4 cm outside its surface; formulas can read how deep a hand is inside it (`depth`, `inzone`) for pseudo-haptic "thick material" effects. |
@@ -77,7 +77,6 @@ is ignored, since the remapping could not be seen there.
 | Input | Action |
 |---|---|
 | Index trigger | `hold` (what it does depends on the formulas) |
-| Thumbstick ←/→ | `scrub` |
 | A | Trigger: resets `tap` to 0 (e.g. a manual freeze in *Hitstop punch*) |
 | B | Snap back to live |
 | Grip (hold) | Move the water block to your right hand |
@@ -90,10 +89,10 @@ is ignored, since the remapping could not be seen there.
 | Thumbstick ↑/↓ | Select a setting (knobs k1–k3, effects, display, …) |
 | Thumbstick ←/→ | Change value (hold to accelerate) |
 | Thumbstick click | Reset to default |
-| X | Next preset |
+| X | Next main preset |
 | Grip (hold) | **Bypass**: show live for an instant A/B comparison |
 
-**Editor keyboard** (play mode over Link): Space = hold, ←/→ = scrub, Enter = trigger, Backspace = live.
+**Editor keyboard** (play mode over Link): Space = hold, Enter = trigger, Backspace = live.
 
 ## Web control
 
@@ -103,7 +102,7 @@ The headset runs a small HTTP + WebSocket server on port **8080** (no internet, 
   tune knobs and effects, save presets, and watch δ(t), r(t), u(t) live. Set an **operator PIN** on the
   *Remote Control Bridge* component before a public demo, so visitors cannot reconfigure things.
 - `http://<headset-ip>:8080/` **remote**, for onlookers: it shows only the controls the current formulas use. That is
-  a hold button if they read `hold`, a scrub slider for `scrub`, and a Trigger button for `tap`.
+  a hold button if they read `hold`, and a Trigger button for `tap`.
 
 **No phone?** A laptop works for everything: hold **Space** (on either page) to hold, **P** = trigger, **L** = snap to live.
 
@@ -126,10 +125,10 @@ where the sliders appear as `uon`, `aon` and `aoff`:
 | Formula | Meaning | Example |
 |---|---|---|
 | **when** | trigger condition; while true `on` = 1 and `ton` counts up, afterwards `toff` counts up | `hold`, `speed > 0.9`, `inzone` |
-| **u =** | injection: 0 = real time, 0.8 = 5× slower, 1 = freeze, > 1 = rewind | `on ? k1 : 0` |
-| **α =** | recovery: pulls the delay back; catch-up takes ≈ 3/α s | `on ? 0.05 : k2` |
+| **u =** | injection: 0 = real time, 0.8 = 5× slower, 1 = freeze, > 1 = rewind | `on ? uon : 0` |
+| **α =** | recovery: pulls the delay back; catch-up takes ≈ 3/α s | `on ? aon : aoff` |
 
-**Variables:** `t` time · `d` current delay δ · `B` buffer budget · `hold` 0–1 · `scrub` −1…1 · `speed` fastest hand in
+**Variables:** `t` time · `d` current delay δ · `B` buffer budget · `hold` 0–1 · `speed` fastest hand in
 view (m/s) · `lspeed`, `rspeed` per hand · `depth` how deep a hand is in the water (m) · `inzone` · `on` · `ton` · `toff`
 · `tap` seconds since the last Trigger · `uon aon aoff` the three sliders · `k1 k2 k3` **self-defined variables** (0–10,
 for any extra number a formula needs; each preset names its own, and they get sliders only when a formula uses them).
@@ -143,27 +142,33 @@ released. Drag points, double-click to add or remove; a "now" line shows where t
 shape* switches the formula over to it. In formulas they are `c1(x)` and `c2(x)`, e.g. *Draw your own*:
 u = `on ? c1(ton) : 0`, α = `on ? aon : c2(toff)`. Shapes are saved with presets.
 
+Presets come in two lists. The **main presets** are the most representative designs and only use the three sliders:
+
 | Preset | when | u = | α = |
 |---|---|---|---|
-| Hold to slow | `hold` | `on ? k1 : 0` | `on ? 0.05 : k2` |
-| Hold to slow (analog) | `hold > 0.05` | `on ? k1 * hold : 0` | `on ? 0.05 : k2` |
-| Draw your own | `hold` | `on ? c1(ton) : 0` | `on ? 0.05 : c2(toff)` |
-| Looping shape | `1` | `c1(t % k1)` | `c1(t % k1) > 0.5 ? 0.05 : k2` |
-| Freeze frame | `hold` | `on ? 1 : 0` | `on ? 0 : k2` |
-| Gradual brake | `hold` | `on ? k1 * smoothstep(0, k3, ton) : 0` | `on ? 0.05 : k2` |
-| Rewind while held | `hold` | `on ? 1 + k1 : 0` | `on ? 0 : k2` |
-| Referee replay | `hold \|\| abs(scrub) > 0.15` | `on ? 1 - k1 * scrub : 0` | `on ? 0 : k2` |
-| Motion slow-mo | `speed > k3` | `on \|\| toff < 0.15 ? k1 : 0` | `on \|\| toff < 0.15 ? 0.05 : k2` |
-| Outrun yourself | `speed > k3` | `on ? min(0.95, k1 * (speed - k3)) : 0` | `on ? 0.05 : k2` |
-| Hitstop punch | `speed > k3 \|\| tap < 0.3 \|\| (on && ton < k1)` | `on ? 0.95 : 0` | `on ? 0 : k2` |
-| Water / Honey | `inzone` | `on ? k1 * sat(depth / 0.03) : 0` | `on ? k3 : k2` |
-| Time wobble | `1` | `max(0, k1 + 0.6 * sin(2 * pi * k3 * t))` | `k2` |
-| Stutter | `1` | `0.98 * step(k1, sin(2 * pi * k3 * t))` | `k2` |
-| Drifting time | `1` | `k1 * noise(k3 * t)` | `k2` |
-| Constant u, α | `0` | `k1` | `k2` |
+| Live | `0` | `0` | `aoff` |
+| Hold to slow | `hold` | `on ? uon : 0` | `on ? aon : aoff` |
+| Echo trails · Time lens · Ghost | `hold` | `on ? uon : 0` | `on ? aon : aoff` (with a different representation) |
+| Motion slow-mo | `speed > 0.6` | `on \|\| toff < 0.15 ? uon : 0` | `on \|\| toff < 0.15 ? aon : aoff` |
+| Time wobble | `1` | `max(0, uon + 0.6 * sin(pi * t))` | `aon` |
+| Constant u, α | `1` | `uon` | `aon` |
+| Water / Honey | `inzone` | `on ? uon * sat(depth / 0.03) : 0` | `on ? aon : aoff` |
 
-Also built in: *Live, Bullet time, Echo trails, Time lens, Ghost* (hold-to-slow combined with different
-representations). Presets saved from the operator page live in
+**Advanced presets** are more specialised, and most add self-defined variables to tune:
+
+| Preset | when | u = | α = |
+|---|---|---|---|
+| Hold to slow (analog) | `hold > 0.05` | `on ? uon * hold : 0` | `on ? aon : aoff` |
+| Bullet time · Freeze frame · Rewind while held | `hold` | `on ? uon : 0` | `on ? aon : aoff` (u = 0.92, 1, 2) |
+| Gradual brake | `hold` | `on ? uon * smoothstep(0, k1, ton) : 0` | `on ? aon : aoff` |
+| Outrun yourself | `speed > k1` | `on ? min(0.95, k2 * (speed - k1)) : 0` | `on ? aon : aoff` |
+| Hitstop punch | `speed > k1 \|\| tap < 0.3 \|\| (on && ton < k2)` | `on ? uon : 0` | `on ? aon : aoff` |
+| Draw your own | `hold` | `on ? c1(ton) : 0` | `on ? aon : c2(toff)` |
+| Looping shape | `1` | `c1(t % k1)` | `c1(t % k1) > 0.5 ? aon : aoff` |
+| Stutter | `1` | `uon * step(0.7, sin(2 * pi * k1 * t))` | `aon` |
+| Drifting time | `1` | `uon * noise(k1 * t)` | `aon` |
+
+The headset's X button steps through the main presets; the operator page lists both. Presets saved from the operator page live in
 `/sdcard/Android/data/org.remappingtime.demo/files/remapping_presets.json`.
 
 ### Head reprojection

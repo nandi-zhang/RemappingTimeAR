@@ -14,7 +14,7 @@ namespace RemappingTime
     /// <item>Y: cycle Full → Minimal → Hidden</item>
     /// <item>Left stick up/down: select a parameter. Left/right: change it (hold to accelerate)</item>
     /// <item>Left stick click: reset the selected parameter to its default</item>
-    /// <item>X: next preset</item>
+    /// <item>X: next preset (main list; advanced presets are in the Preset entry and on the web page)</item>
     /// <item>Left grip (hold): bypass, i.e. compare with live (handled by <see cref="InputHub"/>)</item>
     /// </list>
     ///
@@ -263,7 +263,7 @@ namespace RemappingTime
                 }
                 if (OVRInput.GetDown(OVRInput.Button.One, L))
                 {
-                    engine.FindTunable("engine.preset")?.Nudge(1);
+                    engine.NextMainPreset();
                     any = true;
                 }
             }

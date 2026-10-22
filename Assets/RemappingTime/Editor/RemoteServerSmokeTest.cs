@@ -89,7 +89,7 @@ namespace RemappingTime.EditorTools
                         {
                             t = t, delay = delay, rate = 1f - 0.4f * Mathf.Cos(t * 0.8f), u = hold * 0.8f, alpha = 0.05f,
                             phase = hold > 0 ? "slowing" : "live", policy = active.Id, preset = "smoke test", maxDelay = 2f,
-                            budget = 2f, fps = 60f, hold = hold, remoteHold = hold, scrub = 0f, tracked = true, speed = 0.4f,
+                            budget = 2f, fps = 60f, hold = hold, remoteHold = hold, tracked = true, speed = 0.4f,
                             source = "simulated", battery = 0.8f, clients = server.ClientCount, status = "smoke test",
                             values = values.ToArray(),
                         }));

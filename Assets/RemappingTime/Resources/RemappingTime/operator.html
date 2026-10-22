@@ -222,7 +222,6 @@
       <div class="bars">
         <span>hold</span><div class="bar"><div id="bHold"></div></div><span class="num" id="nHold">0</span>
         <span>remote hold</span><div class="bar"><div id="bRemote"></div></div><span class="num" id="nRemote">0</span>
-        <span>scrub</span><div class="bar center"><div id="bScrub"></div></div><span class="num" id="nScrub">0</span>
         <span class="hand" id="lLeft"><span>left hand</span></span><div class="bar"><div id="bLeft" style="background:var(--green)"></div></div><span class="num" id="nLeft">–</span>
         <span class="hand" id="lRight"><span>right hand</span></span><div class="bar"><div id="bRight" style="background:var(--green)"></div></div><span class="num" id="nRight">–</span>
         <span>buffer used</span><div class="bar"><div id="bBuffer" style="background:var(--violet)"></div></div><span class="num" id="nBuffer">0</span>
@@ -308,13 +307,21 @@
     const active = m.policies.find(p => p.id === m.activePolicy);
     $('policyDesc').textContent = active ? active.description : '';
 
+    // Presets in three groups: the representative main list, advanced ones (most have self-defined
+    // variables to tune), and presets saved on this headset.
     const sel = $('presetSelect'); sel.innerHTML = '';
+    const groups = {};
+    for (const [cat, label] of [['main', 'Presets'], ['advanced', 'Advanced presets'], ['saved', 'Your presets']]) {
+      groups[cat] = document.createElement('optgroup'); groups[cat].label = label;
+    }
     m.presets.forEach((name, i) => {
       const o = document.createElement('option'); o.value = o.textContent = name;
       o.dataset.desc = (m.presetDescriptions || [])[i] || '';
+      o.dataset.cat = (m.presetCategories || [])[i] || 'main';
       if (name === m.activePreset) o.selected = true;
-      sel.appendChild(o);
+      (groups[o.dataset.cat] || groups.main).appendChild(o);
     });
+    for (const g of Object.values(groups)) if (g.children.length) sel.appendChild(g);
     showPresetDesc();
 
     const fn = m.function;
@@ -491,6 +498,8 @@
   function showPresetDesc() {
     const o = $('presetSelect').selectedOptions[0];
     $('presetDesc').textContent = o ? o.dataset.desc : '';
+    // Only presets saved on the headset can be deleted (and only by the operator).
+    $('presetDelete').disabled = !o || o.dataset.cat !== 'saved' || !(schema && schema.role === 'operator');
   }
   $('presetSelect').addEventListener('change', showPresetDesc);
 
@@ -620,8 +629,6 @@
 
     bar('bHold', 'nHold', s.hold, 1, s.hold.toFixed(2));
     bar('bRemote', 'nRemote', s.remoteHold, 1, s.remoteHold.toFixed(2));
-    const sc = $('bScrub'); sc.style.width = Math.abs(s.scrub) * 50 + '%'; sc.style.left = s.scrub < 0 ? (50 - Math.abs(s.scrub) * 50) + '%' : '50%';
-    $('nScrub').textContent = s.scrub.toFixed(2);
     for (const [side, h] of [['Left', s.left], ['Right', s.right]]) {
       const tracked = h && h.tracked;
       bar('b' + side, 'n' + side, tracked ? h.speed : 0, 3, tracked ? h.speed.toFixed(1) + ' m/s' : 'not tracked');
@@ -686,10 +693,10 @@
   document.querySelectorAll('[data-action]').forEach(b => b.onclick = () => send({ type: 'action', name: b.dataset.action }));
   $('presetApply').onclick = () => send({ type: 'preset', name: $('presetSelect').value });
   $('presetSave').onclick = () => { const n = $('presetName').value.trim(); if (n) send({ type: 'savePreset', name: n }); };
-  $('presetDelete').onclick = () => { const n = $('presetSelect').value; if (n && confirm(`Delete preset "${n}"? Built-in presets cannot be deleted.`)) send({ type: 'deletePreset', name: n }); };
+  $('presetDelete').onclick = () => { const n = $('presetSelect').value; if (n && confirm(`Delete preset "${n}"?`)) send({ type: 'deletePreset', name: n }); };
 
   const hold = $('hold'); let holding = false;
-  const sendHold = () => send({ type: 'input', hold: holding ? 1 : 0, scrub: 0 });
+  const sendHold = () => send({ type: 'input', hold: holding ? 1 : 0 });
   setInterval(() => { if (holding) sendHold(); }, 50);
   hold.addEventListener('pointerdown', e => { hold.setPointerCapture(e.pointerId); holding = true; hold.classList.add('active'); sendHold(); });
   const releaseHold = () => { if (!holding) return; holding = false; hold.classList.remove('active'); sendHold(); };

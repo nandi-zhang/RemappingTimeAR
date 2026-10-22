@@ -29,7 +29,7 @@ If the bridge has an operator PIN and it does not match, the client stays a remo
 | type | fields | effect |
 |---|---|---|
 | `hello` | `role`, `pin` | Choose a role; the reply is a `schema`. |
-| `input` | `hold` 0..1, `scrub` −1..1 | This client's hold/scrub. **Resend at ≥ 5 Hz while active**: inputs expire after 0.6 s without updates, and on disconnect. The strongest hold across clients wins. |
+| `input` | `hold` 0..1 | This client's hold. **Resend at ≥ 5 Hz while active**: inputs expire after 0.6 s without updates, and on disconnect. The strongest hold across clients wins. |
 | `action` | `name` | `trigger` (same as the A button: resets `tap`), `live` (snap to live), `moveWater` (water block in front of the wearer), `resetKnobs`. |
 | `set` | `id`, `value` | Set a tunable (see `schema.tunables`). Choices take the option index; toggles take 0/1. |
 | `expr` | `id`, `name` | Set a formula: `id` = `when`, `u` or `alpha`, `name` = the formula text. Replies with a `notice`: `"u = …"` when applied, `"u: <error>"` when not (the previous formula stays). |
@@ -49,17 +49,20 @@ If the bridge has an operator PIN and it does not match, the client stays a remo
   "url": "http://192.168.1.23:8080/", "budget": 2.0,
   "activePolicy": "hold", "activePreset": "Hold to slow",
   "policies": [ { "id": "fn", "name": "Time function", "description": "…" } ],
-  "function": { "when": "hold", "u": "on ? k1 : 0", "alpha": "on ? 0.05 : k2",
+  "function": { "when": "hold", "u": "on ? uon : 0", "alpha": "on ? aon : aoff",
                 "variables": [ "t", "d", "…" ], "variableHelp": [ "…" ], "functions": [ "sin", "…" ],
-                "usesHold": true, "usesScrub": false, "usesTrigger": false, "usesWater": false, "usesMotion": false },
+                "usesHold": true, "usesTrigger": false, "usesWater": false, "usesMotion": false },
   "tunables": [ { "id": "fn.k1", "label": "k1 · slowdown u", "group": "Policy", "unit": "",
                   "help": "…", "min": 0, "max": 10, "step": 0.01, "value": 0.8, "def": 0.8, "options": [] } ],
   "presets": [ "Live", "Hold to slow", "…" ], "presetDescriptions": [ "…", "…" ],
+  "presetCategories": [ "main", "main", "…" ],
   "actions": [ "live", "trigger", "moveWater", "resetKnobs" ]
 }
 ```
 
 A tunable with a non-empty `options` array is a choice, and `["Off","On"]` is a toggle.
+`presetCategories` groups the presets: `main` (representative), `advanced` (specialised, usually with self-defined
+variables) or `saved` (saved on this headset).
 
 **`state`**: broadcast about 15 times per second.
 
@@ -67,7 +70,7 @@ A tunable with a non-empty `options` array is a choice, and `["Off","On"]` is a 
 {
   "type": "state", "t": 123.45, "delay": 0.82, "rate": 0.21, "u": 0.8, "alpha": 0.05, "phase": "slowing",
   "policy": "fn", "preset": "Hold to slow", "maxDelay": 2.0, "budget": 2.0, "fps": 59.8,
-  "hold": 1.0, "remoteHold": 1.0, "scrub": 0.0, "bypass": false,
+  "hold": 1.0, "remoteHold": 1.0, "bypass": false,
   "tracked": true, "inView": true, "speed": 0.42, "source": "right hand",
   "left":  { "tracked": true, "inView": false, "speed": 0.10, "device": "left hand" },
   "right": { "tracked": true, "inView": true,  "speed": 0.42, "device": "right hand" },
@@ -88,7 +91,7 @@ ws = websocket.create_connection("ws://192.168.1.23:8080/ws")
 ws.send(json.dumps({"type": "hello", "role": "operator", "pin": ""}))
 ws.send(json.dumps({"type": "preset", "name": "Bullet time"}))
 ws.send(json.dumps({"type": "expr", "id": "u", "name": "on ? 0.9 * smoothstep(0, 1, ton) : 0"}))
-ws.send(json.dumps({"type": "input", "hold": 1, "scrub": 0}))   # resend while holding
+ws.send(json.dumps({"type": "input", "hold": 1}))   # resend while holding
 print(json.loads(ws.recv())["type"])
 ```
 

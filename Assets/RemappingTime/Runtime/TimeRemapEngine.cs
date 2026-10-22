@@ -349,6 +349,22 @@ namespace RemappingTime
             zone.UpdateVisual(ctx.InZone, frame);
         }
 
+        /// <summary>
+        /// Applies the next preset after the active one, skipping advanced presets, so a quick button press
+        /// steps through the main list (and any saved presets).
+        /// </summary>
+        public void NextMainPreset()
+        {
+            IReadOnlyList<RemapPreset> all = Presets.All;
+            if (all.Count == 0) return;
+            int start = Math.Max(0, Array.IndexOf(Presets.Names(), ActivePresetName));
+            for (int i = 1; i <= all.Count; i++)
+            {
+                RemapPreset p = all[(start + i) % all.Count];
+                if (!p.advanced) { ApplyPreset(p.name); return; }
+            }
+        }
+
         private void RebuildPresetChoice()
         {
             Tunable old = _presetChoice;
