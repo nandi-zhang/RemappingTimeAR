@@ -187,6 +187,17 @@ The headset's X button steps through the main presets; the operator page lists b
   the water use 0.6 m); in practice the difference was hard to perceive, so it is not exposed in the UIs.
 - **Off**: the image follows the head (no reprojection).
 
+How each mode places a buffered frame while the head moves after it was captured (top view, plus where the wearer
+sees three things at different depths compared to the live passthrough):
+
+| Off | Flat plane | Depth (experimental) |
+|---|---|---|
+| ![Off](Docs/figures/reprojection_1_off.gif) | ![Flat plane](Docs/figures/reprojection_2_flat.gif) | ![Depth](Docs/figures/reprojection_3_depth.gif) |
+
+`H_cap` is the camera pose stored with the frame, `H_now` the current one, and `K` the camera intrinsics. The figures are a
+simplified 2D model (one camera, 9 cm in front of the neck pivot); regenerate them with
+`python Docs/figures/make_reprojection_gifs.py Docs/figures`.
+
 The planar-only version of the project is tagged `v0.1-planar-reprojection` in git.
 
 ---
