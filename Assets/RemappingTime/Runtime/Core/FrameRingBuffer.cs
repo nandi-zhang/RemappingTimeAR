@@ -18,11 +18,50 @@ namespace RemappingTime
         /// <summary>Capture time in <see cref="CameraClock"/> seconds.</summary>
         public double Time;
 
+        /// <summary>
+        /// Depth captured with this frame (Meta Depth API), if available: a two-slice texture array (left, right),
+        /// the matrices mapping world points into it, and the parameters to convert its values to metres.
+        /// Lets the frame be reprojected with real geometry rather than a single plane.
+        /// </summary>
+        public bool HasDepth;
+        public RenderTexture Depth;
+        public Matrix4x4 DepthLeft, DepthRight;
+        public Vector4 DepthZParams;
+
+        public Matrix4x4 DepthMatrix(Eye eye) => eye == Eye.Left ? DepthLeft : DepthRight;
+
         public RenderTexture Texture(Eye eye) => eye == Eye.Left ? Left : Right;
         public Pose CameraPose(Eye eye) => eye == Eye.Left ? LeftPose : RightPose;
     }
 
     public enum Eye { Left = 0, Right = 1 }
+
+    /// <summary>The Depth API state at one instant: what <see cref="FrameRingBuffer.Push"/> stores with a frame.</summary>
+    public struct DepthSnapshot
+    {
+        public RenderTexture Texture;   // _EnvironmentDepthTexture (Tex2DArray, slice 0 = left, 1 = right)
+        public Matrix4x4 Left, Right;   // _EnvironmentDepthReprojectionMatrices: world → depth clip space
+        public Vector4 ZParams;         // _EnvironmentDepthZBufferParams: depth value → metres
+
+        private static readonly int TextureId = Shader.PropertyToID("_EnvironmentDepthTexture");
+        private static readonly int MatricesId = Shader.PropertyToID("_EnvironmentDepthReprojectionMatrices");
+        private static readonly int ZParamsId = Shader.PropertyToID("_EnvironmentDepthZBufferParams");
+
+        /// <summary>
+        /// Reads the depth the <c>EnvironmentDepthManager</c> currently publishes to shaders. False if the Depth API
+        /// is not running (no manager in the scene, no permission, or unsupported device).
+        /// </summary>
+        public static bool TryGetCurrent(out DepthSnapshot snapshot)
+        {
+            snapshot = default;
+            var tex = Shader.GetGlobalTexture(TextureId) as RenderTexture;
+            if (tex == null || tex.dimension != UnityEngine.Rendering.TextureDimension.Tex2DArray) return false;
+            Matrix4x4[] m = Shader.GetGlobalMatrixArray(MatricesId);
+            if (m == null || m.Length < 2) return false;
+            snapshot = new DepthSnapshot { Texture = tex, Left = m[0], Right = m[1], ZParams = Shader.GetGlobalVector(ZParamsId) };
+            return snapshot.ZParams.x != 0f;
+        }
+    }
 
     /// <summary>
     /// The result of looking up a source time s in the buffer: the two frames that bracket it and how far
@@ -111,7 +150,7 @@ namespace RemappingTime
         /// Copies the current camera images into the buffer. Frames must arrive in increasing time order;
         /// a frame that is not newer than the newest buffered frame is ignored.
         /// </summary>
-        public void Push(Texture left, Texture right, Pose leftPose, Pose rightPose, double time)
+        public void Push(Texture left, Texture right, Pose leftPose, Pose rightPose, double time, DepthSnapshot? depth = null)
         {
             if (_frames == null) return;
             if (_count > 0 && time <= NewestTime) return;
@@ -130,9 +169,34 @@ namespace RemappingTime
             slot.LeftPose = leftPose;
             slot.RightPose = rightPose;
             slot.Time = time;
+            StoreDepth(slot, depth);
 
             _head = (_head + 1) % _frames.Length;
             _count = Mathf.Min(_count + 1, _frames.Length);
+        }
+
+        /// <summary>Copies the depth snapshot into the slot's own texture (allocated on first use).</summary>
+        private static void StoreDepth(StereoFrame slot, DepthSnapshot? depth)
+        {
+            slot.HasDepth = false;
+            if (depth == null || depth.Value.Texture == null) return;
+            RenderTexture src = depth.Value.Texture;
+            if (slot.Depth == null || slot.Depth.width != src.width || slot.Depth.height != src.height ||
+                slot.Depth.graphicsFormat != src.graphicsFormat || slot.Depth.volumeDepth != src.volumeDepth)
+            {
+                DestroyTexture(slot.Depth);
+                RenderTextureDescriptor desc = src.descriptor;
+                desc.depthBufferBits = 0;
+                desc.useMipMap = false;
+                desc.autoGenerateMips = false;
+                slot.Depth = new RenderTexture(desc) { name = "RemapBuffer depth", filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+                slot.Depth.Create();
+            }
+            Graphics.CopyTexture(src, slot.Depth);
+            slot.DepthLeft = depth.Value.Left;
+            slot.DepthRight = depth.Value.Right;
+            slot.DepthZParams = depth.Value.ZParams;
+            slot.HasDepth = true;
         }
 
         /// <summary>
@@ -182,6 +246,7 @@ namespace RemappingTime
             {
                 DestroyTexture(f.Left);
                 DestroyTexture(f.Right);
+                DestroyTexture(f.Depth);
             }
             _frames = null;
             _count = 0;

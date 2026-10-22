@@ -38,6 +38,13 @@ namespace RemappingTime
                 OVRPermissionsRequester.Request(new[] { OVRPermissionsRequester.Permission.Scene });
         }
 
+        /// <summary>Share of captured camera frames that carried a depth map (what depth reprojection uses).</summary>
+        private string FramesWithDepth()
+        {
+            StereoPassthroughCapture c = engine != null ? engine.Capture : null;
+            return c == null || c.PairsCaptured == 0 ? "–" : $"{100f * c.FramesWithDepth / c.PairsCaptured:F0}%";
+        }
+
         private void Update()
         {
             if (engine == null || Time.unscaledTime < _next) return;
@@ -59,7 +66,7 @@ namespace RemappingTime
 
             engine.SetDiagnostic("depth",
                 $"supported {EnvironmentDepthManager.IsSupported} | permission {permission} | available {available} | " +
-                $"texture {texture} | ahead {ahead}");
+                $"texture {texture} | ahead {ahead} | frames with depth {FramesWithDepth()}");
         }
     }
 }

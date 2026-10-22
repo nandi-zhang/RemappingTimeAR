@@ -60,6 +60,66 @@ namespace RemappingTime
             _renderer.sharedMaterial = Material;
         }
 
+        /// <summary>
+        /// Replaces the quad with a <paramref name="cols"/>×<paramref name="rows"/> grid spanning the same corners, so
+        /// the shader can bend it to follow scene depth (depth reprojection). UVs still run 0..1 across it.
+        /// </summary>
+        public void SetGrid(Vector3 bl, Vector3 br, Vector3 tl, Vector3 tr, int cols, int rows)
+        {
+            var verts = new Vector3[(cols + 1) * (rows + 1)];
+            var uvs = new Vector2[verts.Length];
+            for (int y = 0; y <= rows; y++)
+            for (int x = 0; x <= cols; x++)
+            {
+                float u = x / (float)cols, v = y / (float)rows;
+                Vector3 bottom = Vector3.Lerp(bl, br, u), top = Vector3.Lerp(tl, tr, u);
+                int i = y * (cols + 1) + x;
+                verts[i] = Vector3.Lerp(bottom, top, v);
+                uvs[i] = new Vector2(u, v);
+            }
+            var tris = new int[cols * rows * 6];
+            int t = 0;
+            for (int y = 0; y < rows; y++)
+            for (int x = 0; x < cols; x++)
+            {
+                int a = y * (cols + 1) + x, b = a + 1, c = a + cols + 1, d = c + 1;
+                tris[t++] = a; tris[t++] = c; tris[t++] = b;
+                tris[t++] = c; tris[t++] = d; tris[t++] = b;
+            }
+            _mesh.Clear();
+            _mesh.vertices = verts;
+            _mesh.uv = uvs;
+            _mesh.triangles = tris;
+            _mesh.bounds = new Bounds((bl + tr) * 0.5f, Vector3.one * 50f); // vertices move in the shader
+        }
+
+        private static readonly int DepthTexId = Shader.PropertyToID("_DepthTex");
+        private static readonly int DepthMatId = Shader.PropertyToID("_DepthMat");
+        private static readonly int DepthZId = Shader.PropertyToID("_DepthZ");
+        private static readonly int DepthSliceId = Shader.PropertyToID("_DepthSlice");
+        private static readonly int DistId = Shader.PropertyToID("_Dist");
+        private const string DepthKeyword = "DEPTH_REPROJ";
+
+        /// <summary>
+        /// Enables depth reprojection for this quad using the depth stored with its frame. The quad must be a grid
+        /// (<see cref="SetGrid"/>) placed at the frame's camera pose and scaled by <paramref name="planeDistance"/>,
+        /// which is also the fallback depth where the depth map has no data.
+        /// </summary>
+        public void SetDepth(StereoFrame frame, float planeDistance)
+        {
+            bool on = frame != null && frame.HasDepth && frame.Depth != null;
+            if (on)
+            {
+                Material.EnableKeyword(DepthKeyword);
+                Material.SetTexture(DepthTexId, frame.Depth);
+                Material.SetMatrix(DepthMatId, frame.DepthMatrix(Eye));
+                Material.SetVector(DepthZId, frame.DepthZParams);
+                Material.SetFloat(DepthSliceId, (int)Eye);
+                Material.SetFloat(DistId, planeDistance);
+            }
+            else Material.DisableKeyword(DepthKeyword);
+        }
+
         /// <summary>Sets the quad corners in local space: bottom-left, bottom-right, top-left, top-right.</summary>
         public void SetCorners(Vector3 bl, Vector3 br, Vector3 tl, Vector3 tr)
         {

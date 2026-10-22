@@ -50,6 +50,10 @@ Shader "RemappingTime/ReprojectedFrame"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            // DEPTH_REPROJ: bend the grid to the scene depth stored with the frame (multi_compile, not
+            // shader_feature, so the variant is never stripped from builds).
+            #pragma multi_compile_local __ DEPTH_REPROJ
+            #pragma target 3.5
             #include "UnityCG.cginc"
 
             struct appdata
@@ -74,13 +78,55 @@ Shader "RemappingTime/ReprojectedFrame"
             float _LensOn, _LensRadius, _LensFeather;
             float _EyeSelect, _EyeIndex;
 
+        #if defined(DEPTH_REPROJ)
+            UNITY_DECLARE_TEX2DARRAY(_DepthTex);   // depth stored with this frame (slice 0 left, 1 right)
+            float4x4 _DepthMat;                     // world → depth clip space, at capture time
+            float4 _DepthZ;                         // depth value → metres: z = x / (ndc + y)
+            float _DepthSlice, _Dist;
+
+            // Distance along the camera's forward axis to the scene surface hit by this vertex's ray.
+            // The ray is O + dir * z (dir is the camera ray at unit depth). Starting from the plane distance,
+            // each step projects the current point into the depth map and rescales z by
+            // (surface depth / point depth); because the depth views sit close to the colour cameras, this
+            // converges in a few steps. Where there is no depth (outside the map, or "far"), z stays put.
+            float SceneDepthAlongRay(float3 O, float3 dir)
+            {
+                float z = _Dist;
+                [unroll] for (int k = 0; k < 4; k++)
+                {
+                    float3 P = O + dir * z;
+                    float4 ds = mul(_DepthMat, float4(P, 1.0));
+                    if (ds.w <= 1e-4) break;
+                    float2 uv = (ds.xy / ds.w + 1.0) * 0.5;
+                    if (any(uv < 0.0) || any(uv > 1.0)) break;
+                    float d = UNITY_SAMPLE_TEX2DARRAY_LOD(_DepthTex, float3(uv, _DepthSlice), 0).r;
+                    float ndc = d * 2.0 - 1.0;
+                    if (ndc >= 0.999) break;                       // no depth measured here
+                    float surfaceDepth = _DepthZ.x / (ndc + _DepthZ.y);
+                    float pointDepth = _DepthZ.x / (ds.z / ds.w + _DepthZ.y);
+                    if (pointDepth <= 1e-3) break;
+                    z = clamp(z * surfaceDepth / pointDepth, 0.15, 8.0);
+                }
+                return z;
+            }
+        #endif
+
             v2f vert (appdata v)
             {
                 v2f o;
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_INITIALIZE_OUTPUT(v2f, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+            #if defined(DEPTH_REPROJ)
+                // The quad sits at the capture camera pose, scaled by the plane distance, with vertices on the
+                // unit-depth image plane. Recover the camera origin and this vertex's ray, then move the vertex
+                // to the depth the scene actually had along that ray.
+                float3 O = mul(unity_ObjectToWorld, float4(0, 0, 0, 1)).xyz;
+                float3 dir = mul((float3x3)unity_ObjectToWorld, v.vertex.xyz) / max(_Dist, 1e-3);
+                o.pos = UnityWorldToClipPos(O + dir * SceneDepthAlongRay(O, dir));
+            #else
                 o.pos = UnityObjectToClipPos(v.vertex);
+            #endif
                 o.uv = v.uv;
 
             #if defined(USING_STEREO_MATRICES)

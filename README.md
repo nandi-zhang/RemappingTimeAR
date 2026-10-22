@@ -161,12 +161,23 @@ Also built in: *Live, Bullet time, Echo trails, Time lens, Ghost* (hold-to-slow 
 representations). Presets saved from the operator page live in
 `/sdcard/Android/data/org.remappingtime.demo/files/remapping_presets.json`.
 
-### Head reprojection: choosing the projection distance
+### Head reprojection
 
-Reprojection uses a single plane at the **projection distance** D (*Display* settings). It is exact for surfaces at
-distance D. Elsewhere, any movement of the cameras between capture and display shows up as parallax
-∝ movement × |1/D − 1/depth|. That includes head *rotation*, because the cameras sit in front of the neck's pivot.
-Set D to where the action is: about 0.6 m for hands over a table, 1.5–2 m for watching another person.
+*Display → Head reprojection* has three modes:
+
+- **Depth** (default): each buffered frame stores the depth map from Meta's Depth API, and the frame is drawn as a grid
+  whose points are pushed out to the scene's measured depth along their camera rays. Near and far things both stay put
+  as you move or turn your head. Limitations: the depth map is low resolution and smoothed, so sharp depth edges (a hand in
+  front of a far wall) stretch slightly, and fast-moving objects lag in the depth sensor. Where there is no depth, the
+  plane below is used. Requires the *spatial data* permission (asked on first launch); the operator page's Diagnostics
+  card shows `depth: … frames with depth N%`.
+- **Flat plane**: frames are drawn on one plane at the **projection distance** D. Exact for surfaces at D; elsewhere any
+  camera movement between capture and display shows as parallax ∝ movement × |1/D − 1/depth|, including during head
+  rotation, because the cameras sit in front of the neck's pivot. Set D where the action is (≈0.6 m for hands over a
+  table, 1.5–2 m for watching another person).
+- **Off**: the image follows the head (no reprojection).
+
+The planar-only version of the project is tagged `v0.1-planar-reprojection` in git.
 
 ---
 
@@ -255,7 +266,7 @@ round could set when = `noise(t) > 0.8`, log when `Main.Phase == "on"`, and scor
 
 ## Known limitations
 
-- Reprojection is planar (single depth). A depth-aware variant could use the Depth API.
+- Depth reprojection follows a low-resolution, smoothed depth map: depth edges stretch a little and fast motion lags.
 - The buffer only holds the past, so δ ≥ 0. Forward sampling (showing predicted future frames, paper Sec. 6.2) is not yet included.
 - The remapped canvas covers the cameras' field of view, which is slightly smaller than the display's. Feathering hides the edge, but it is there.
 - Hand tracking can lose very fast motion; controllers are more reliable for impact effects.

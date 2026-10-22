@@ -49,6 +49,8 @@ namespace RemappingTime
         /// <summary>Measured rate at which stereo pairs are buffered (Hz).</summary>
         public float CaptureFps { get; private set; }
         public int PairsCaptured { get; private set; }
+        /// <summary>How many captured frames came with a depth map.</summary>
+        public int FramesWithDepth { get; private set; }
         /// <summary>Frames that were overwritten before their partner eye arrived (should stay near 0).</summary>
         public int UnpairedFrames { get; private set; }
         public string Status { get; private set; } = "starting";
@@ -133,7 +135,10 @@ namespace RemappingTime
             if (_leftFresh && _rightFresh)
             {
                 double t = Clock.ToSeconds(_leftTs >= _rightTs ? _leftTs : _rightTs);
-                Buffer.Push(leftCamera.GetTexture(), rightCamera.GetTexture(), _leftPose, _rightPose, t);
+                // Store the current depth map with the frame (if the Depth API is running) for depth reprojection.
+                DepthSnapshot? depth = DepthSnapshot.TryGetCurrent(out DepthSnapshot snap) ? snap : (DepthSnapshot?)null;
+                FramesWithDepth += depth.HasValue ? 1 : 0;
+                Buffer.Push(leftCamera.GetTexture(), rightCamera.GetTexture(), _leftPose, _rightPose, t, depth);
                 Clock.NotifyFrame(t);
                 _leftFresh = _rightFresh = false;
                 PairsCaptured++;

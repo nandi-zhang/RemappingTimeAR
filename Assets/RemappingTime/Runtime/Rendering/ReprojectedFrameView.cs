@@ -85,8 +85,10 @@ namespace RemappingTime
                 "and glows at its edges as delay builds. Off: no visual hint, so the wearer must notice the remapping themselves."));
 
             // Display quality and registration.
-            _reproject = Add(Display, Tunable.Toggle("view.reproject", "Head reprojection", true,
-                "Draw each past frame where it was seen, so the past stays put in the room as you move your head. Off = the image follows your head."));
+            _reproject = Add(Display, Tunable.Choice("view.reprojection", "Head reprojection", new[] { "Off", "Flat plane", "Depth" }, 2,
+                "How past frames are placed as you move your head. Flat plane: on one plane at the projection distance " +
+                "(exact only at that distance). Depth: bent to the scene's measured depth (Meta Depth API), so near and far " +
+                "things stay aligned; falls back to the plane where there is no depth. Off: the image follows your head."));
             _distance = Add(Display, Tunable.Range("view.distance", "Projection distance", 0.3f, 5f, 1.0f, 0.05f, "m",
                 "Depth that is exactly registered under head motion. Match it to where the action happens."));
             _blend = Add(Display, Tunable.Toggle("view.blend", "Frame blending", true,
@@ -130,7 +132,8 @@ namespace RemappingTime
         {
             var q = new FrameQuad(name, eye, frameShader, transform, layer, queue);
             Vector3[] c = capture.LocalCorners(eye);
-            q.SetCorners(c[0], c[1], c[2], c[3]);
+            // A grid rather than a quad, so depth reprojection can bend it to the scene.
+            q.SetGrid(c[0], c[1], c[2], c[3], GridCols, GridRows);
             q.UseStereoEyeIndex = singlePassStereo;
             q.Visible = false;
             return q;
@@ -162,6 +165,7 @@ namespace RemappingTime
                 FrameQuad q = _main[e];
                 Pose pose = ResolvePose(eye, sample);
                 Place(q, pose, distance);
+                q.SetDepth(DepthMode ? sample.Nearest : null, distance);
 
                 if (_blend.On) q.SetFrames(sample.Older.Texture(eye), sample.Newer.Texture(eye), sample.Blend);
                 else { RenderTexture n = sample.Nearest.Texture(eye); q.SetFrames(n, n, 0f); }
@@ -182,7 +186,8 @@ namespace RemappingTime
                         continue;
                     }
                     StereoFrame f = es.Nearest;
-                    Place(echo, _reproject.On ? f.CameraPose(eye) : pose, distance);
+                    Place(echo, Reprojecting ? f.CameraPose(eye) : pose, distance);
+                    echo.SetDepth(DepthMode ? f : null, distance);
                     echo.SetFrames(f.Texture(eye), f.Texture(eye), 0f);
                     float strength = _echoStrength.Value * (1f - k / (float)(count + 1));
                     echo.SetLook(strength * _opacity.Value, _feather.Value, aspect, tint, tintAmount, desat, tint, 0f);
@@ -193,7 +198,11 @@ namespace RemappingTime
         }
 
         private Pose ResolvePose(Eye eye, FrameSample sample)
-            => _reproject.On ? sample.InterpolatedPose(eye) : capture.CurrentCameraPose(eye);
+            => Reprojecting ? sample.InterpolatedPose(eye) : capture.CurrentCameraPose(eye);
+
+        private bool Reprojecting => _reproject.Index > 0;
+        private bool DepthMode => _reproject.Index == 2;
+        private const int GridCols = 48, GridRows = 36;
 
         private static void Place(FrameQuad q, Pose pose, float distance)
         {
