@@ -306,5 +306,6 @@ round could set when = `noise(t) > 0.8`, log when `Main.Phase == "on"`, and scor
 
 ## License
 
-*To be decided by the authors before publishing.* Note that the Meta XR SDK packages are covered by the
-Meta Platform Technologies SDK license.
+The code in this repository is released under the [MIT License](LICENSE). The Meta XR SDK packages it depends on
+(pulled in by the Unity Package Manager) are covered by the Meta Platform Technologies SDK license, and TextMesh Pro's
+Liberation Sans font by the SIL Open Font License.
