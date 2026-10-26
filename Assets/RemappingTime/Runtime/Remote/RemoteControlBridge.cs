@@ -224,7 +224,7 @@ namespace RemappingTime.Remote
                 FunctionPolicy fn = engine.Function;
                 function = new FunctionInfo
                 {
-                    when = fn.WhenSource, u = fn.USource, alpha = fn.AlphaSource,
+                    when = fn.WhenSource, u = fn.USource, alpha = fn.AlphaSource, triggerHint = fn.TriggerHint,
                     variables = FunctionPolicy.Variables, variableHelp = FunctionPolicy.VariableHelp,
                     functions = Expression.FunctionNames,
                     usesHold = fn.UsesHold, usesTrigger = fn.UsesTap,

@@ -49,7 +49,7 @@ If the bridge has an operator PIN and it does not match, the client stays a remo
   "url": "http://192.168.1.23:8080/", "budget": 2.0,
   "activePolicy": "hold", "activePreset": "Hold to slow",
   "policies": [ { "id": "fn", "name": "Time function", "description": "…" } ],
-  "function": { "when": "hold", "u": "on ? uon : 0", "alpha": "on ? aon : aoff",
+  "function": { "when": "hold", "u": "on ? uon : 0", "alpha": "on ? aon : aoff", "triggerHint": "hold the right trigger",
                 "variables": [ "t", "d", "…" ], "variableHelp": [ "…" ], "functions": [ "sin", "…" ],
                 "usesHold": true, "usesTrigger": false, "usesWater": false, "usesMotion": false },
   "tunables": [ { "id": "fn.k1", "label": "k1 · slowdown u", "group": "Policy", "unit": "",

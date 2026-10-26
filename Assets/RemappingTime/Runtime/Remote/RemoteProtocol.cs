@@ -43,6 +43,7 @@ namespace RemappingTime.Remote
     public sealed class FunctionInfo
     {
         public string when, u, alpha;
+        public string triggerHint;   // what starts the remapping, in plain words (e.g. "hold the right trigger")
         public string[] variables, variableHelp, functions;
         // What the formulas read, so pages can show the right controls (e.g. a hold button only if 'hold' is used).
         public bool usesHold, usesTrigger, usesWater, usesMotion;

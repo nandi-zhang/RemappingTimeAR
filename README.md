@@ -115,29 +115,37 @@ Unity -batchmode -projectPath . -buildTarget Android -executeMethod RemappingTim
 
 ## Controls
 
-**Right controller: time.** Hand tracking works too. Motion formulas read the hand speed of **both hands**: whichever
-index fingertip (or controller, if held) is moving fastest *inside the cameras' view* counts. Motion outside the view
-is ignored, since the remapping could not be seen there.
+> **The right index trigger starts the remapping.** Hold it to slow (or freeze, or rewind) the world; release it
+> and the world fast-forwards back to live. This is how most presets work. A few presets start on their own instead:
+> *Motion slow-mo* reacts to fast hand motion, *Water* and *Honey* to a hand inside the volume, and *Time wobble* and
+> *Constant u, α* are always on. The HUD's yellow **start:** line always tells you what starts the current preset.
+
+**Right controller: time**
 
 | Input | Action |
 |---|---|
-| Index trigger | `hold` (what it does depends on the formulas) |
+| **Index trigger (hold)** | **Start the remapping** (the `hold` input; squeezing harder matters only in *Hold to slow (analog)*) |
 | A | Trigger: resets `tap` to 0 (e.g. a manual freeze in *Hitstop punch*) |
 | B | Snap back to live |
 | Grip (hold) | Move the water block to your right hand |
+
+Hand tracking works too. Motion presets read the speed of **both hands**: whichever index fingertip (or controller,
+if held) is moving fastest *inside the cameras' view* counts. Motion outside the view is ignored, since the remapping
+could not be seen there.
 
 **Left controller: status HUD and tuner**
 
 | Input | Action |
 |---|---|
 | Y | HUD: minimal (default) → hidden → full |
-| Thumbstick ↑/↓ | Select a setting (knobs k1–k3, effects, display, …) |
+| Thumbstick ↑/↓ | Select a setting (sliders, self-defined variables, effects, display, …) |
 | Thumbstick ←/→ | Change value (hold to accelerate) |
 | Thumbstick click | Reset to default |
 | X | Next main preset |
 | Grip (hold) | **Bypass**: show live for an instant A/B comparison |
 
-**Editor keyboard** (play mode over Link): Space = hold, Enter = trigger, Backspace = live.
+**Without a controller in hand:** hold **Space** on the operator page (or the big button on the phone page) instead of
+the trigger. In the Editor (play mode over Link): Space = hold, Enter = trigger, Backspace = live.
 
 ## Web control
 
@@ -189,29 +197,29 @@ u = `on ? c1(ton) : 0`, α = `on ? aon : c2(toff)`. Shapes are saved with preset
 
 Presets come in two lists. The **main presets** are the most representative designs and only use the three sliders:
 
-| Preset | when | u = | α = |
-|---|---|---|---|
-| Live | `0` | `0` | `aoff` |
-| Hold to slow | `hold` | `on ? uon : 0` | `on ? aon : aoff` |
-| Echo trails · Time lens · Ghost | `hold` | `on ? uon : 0` | `on ? aon : aoff` (with a different representation) |
-| Motion slow-mo | `speed > 0.6` | `on \|\| toff < 0.15 ? uon : 0` | `on \|\| toff < 0.15 ? aon : aoff` |
-| Time wobble | `1` | `max(0, uon + 0.6 * sin(pi * t))` | `aon` |
-| Constant u, α | `1` | `uon` | `aon` |
-| Water / Honey | `inzone` | `on ? uon * sat(depth / 0.03) : 0` | `on ? aon : aoff` |
+| Preset | Start | when | u = | α = |
+|---|---|---|---|---|
+| Live | never | `0` | `0` | `aoff` |
+| Hold to slow | right trigger | `hold` | `on ? uon : 0` | `on ? aon : aoff` |
+| Echo trails · Time lens · Ghost | right trigger | `hold` | `on ? uon : 0` | `on ? aon : aoff` (with a different representation) |
+| Motion slow-mo | fast hand | `speed > 0.6` | `on \|\| toff < 0.15 ? uon : 0` | `on \|\| toff < 0.15 ? aon : aoff` |
+| Time wobble | always on | `1` | `max(0, uon + 0.6 * sin(pi * t))` | `aon` |
+| Constant u, α | always on | `1` | `uon` | `aon` |
+| Water / Honey | hand in the water | `inzone` | `on ? uon * sat(depth / 0.03) : 0` | `on ? aon : aoff` |
 
 **Advanced presets** are more specialised, and most add self-defined variables to tune:
 
-| Preset | when | u = | α = |
-|---|---|---|---|
-| Hold to slow (analog) | `hold > 0.05` | `on ? uon * hold : 0` | `on ? aon : aoff` |
-| Bullet time · Freeze frame · Rewind while held | `hold` | `on ? uon : 0` | `on ? aon : aoff` (u = 0.92, 1, 2) |
-| Gradual brake | `hold` | `on ? uon * smoothstep(0, k1, ton) : 0` | `on ? aon : aoff` |
-| Outrun yourself | `speed > k1` | `on ? min(0.95, k2 * (speed - k1)) : 0` | `on ? aon : aoff` |
-| Hitstop punch | `speed > k1 \|\| tap < 0.3 \|\| (on && ton < k2)` | `on ? uon : 0` | `on ? aon : aoff` |
-| Draw your own | `hold` | `on ? c1(ton) : 0` | `on ? aon : c2(toff)` |
-| Looping shape | `1` | `c1(t % k1)` | `c1(t % k1) > 0.5 ? aon : aoff` |
-| Stutter | `1` | `uon * step(0.7, sin(2 * pi * k1 * t))` | `aon` |
-| Drifting time | `1` | `uon * noise(k1 * t)` | `aon` |
+| Preset | Start | when | u = | α = |
+|---|---|---|---|---|
+| Hold to slow (analog) | right trigger | `hold > 0.05` | `on ? uon * hold : 0` | `on ? aon : aoff` |
+| Bullet time · Freeze frame · Rewind while held | right trigger | `hold` | `on ? uon : 0` | `on ? aon : aoff` (u = 0.92, 1, 2) |
+| Gradual brake | right trigger | `hold` | `on ? uon * smoothstep(0, k1, ton) : 0` | `on ? aon : aoff` |
+| Outrun yourself | fast hand | `speed > k1` | `on ? min(0.95, k2 * (speed - k1)) : 0` | `on ? aon : aoff` |
+| Hitstop punch | fast hand or A | `speed > k1 \|\| tap < 0.3 \|\| (on && ton < k2)` | `on ? uon : 0` | `on ? aon : aoff` |
+| Draw your own | right trigger | `hold` | `on ? c1(ton) : 0` | `on ? aon : c2(toff)` |
+| Looping shape | always on | `1` | `c1(t % k1)` | `c1(t % k1) > 0.5 ? aon : aoff` |
+| Stutter | always on | `1` | `uon * step(0.7, sin(2 * pi * k1 * t))` | `aon` |
+| Drifting time | always on | `1` | `uon * noise(k1 * t)` | `aon` |
 
 The headset's X button steps through the main presets; the operator page lists both. Presets saved from the operator page live in
 `/sdcard/Android/data/org.remappingtime.demo/files/remapping_presets.json`.
@@ -361,7 +369,8 @@ round could set when = `noise(t) > 0.8`, log when `Main.Phase == "on"`, and scor
 ## Known limitations
 
 - Depth reprojection follows a low-resolution, smoothed depth map: depth edges stretch a little and fast motion lags.
-- The buffer only holds the past, so δ ≥ 0. Forward sampling (showing predicted future frames, paper Sec. 6.2) is not yet included.
+- The buffer only holds the past, so δ ≥ 0. **Coming soon:** forward sampling (showing predicted future frames,
+  paper Sec. 6.2), which we implemented for the paper and will add here.
 - The remapped canvas covers the cameras' field of view, which is slightly smaller than the display's. Feathering hides the edge, but it is there.
 - Hand tracking can lose very fast motion; controllers are more reliable for impact effects.
 

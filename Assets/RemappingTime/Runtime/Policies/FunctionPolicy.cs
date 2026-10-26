@@ -131,6 +131,28 @@ namespace RemappingTime
         public bool UsesCurve(string name) => (_when?.Calls(name) ?? false) || (_u?.Calls(name) ?? false) || (_alpha?.Calls(name) ?? false);
 
         private bool Reads(int slot) => (_when?.Uses(slot) ?? false) || (_u?.Uses(slot) ?? false) || (_alpha?.Uses(slot) ?? false);
+        private bool WhenReads(int slot) => _when?.Uses(slot) ?? false;
+
+        /// <summary>
+        /// What starts the remapping, in plain words, derived from the 'when' formula (shown on the HUD and the
+        /// operator page): e.g. "hold the right trigger", "move a hand fast or press A", "always on".
+        /// </summary>
+        public string TriggerHint
+        {
+            get
+            {
+                var ways = new List<string>();
+                if (WhenReads(Hold)) ways.Add("hold the right trigger");
+                if (WhenReads(Speed) || WhenReads(LSpeed) || WhenReads(RSpeed)) ways.Add("move a hand fast");
+                if (WhenReads(Depth) || WhenReads(InZone)) ways.Add("put a hand in the water");
+                if (WhenReads(Tap)) ways.Add("press A");
+                if (ways.Count > 0) return string.Join(" or ", ways);
+                if (_when == null) return "never";
+                // No user input: a constant ("1" / "0") or a function of time.
+                bool timed = WhenReads(T) || WhenReads(D) || WhenReads(On) || WhenReads(TOn) || WhenReads(TOff);
+                return timed ? "automatic" : _when.Evaluate(new float[Variables.Length]) > 0.5f ? "always on" : "never (live)";
+            }
+        }
 
         /// <summary>Sets all three expressions; any that fail to compile keep their previous version.</summary>
         public bool SetExpressions(string when, string u, string alpha)

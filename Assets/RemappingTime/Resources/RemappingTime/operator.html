@@ -147,7 +147,7 @@
 
     <div class="card" id="fnCard">
       <h2>Time remapping<small>· u (adds delay) and α (pulls it back)</small></h2>
-      <div class="desc" style="margin-top:0">Triggered by <code id="trigText">–</code>.
+      <div class="desc" style="margin-top:0">Start: <b id="trigHint">–</b> <span class="muted">(when = <code id="trigText">–</code>)</span>.
         <b>u</b> adds delay (0 = real time · 0.8 = 5× slower · 1 = freeze · &gt;1 = rewind);
         <b>α</b> pulls it back (catch-up ≈ 3/α seconds).</div>
       <div class="group" id="basicParams" style="margin-top:10px"></div>
@@ -330,6 +330,7 @@
     if (hasFn) {
       setFormula('fxWhen', fn.when); setFormula('fxU', fn.u); setFormula('fxAlpha', fn.alpha);
       $('trigText').textContent = fn.when || '–';
+      $('trigHint').textContent = fn.triggerHint || '–';
       $('moveWater').style.display = fn.usesWater ? '' : 'none';
       const table = $('varTable'); table.innerHTML = '';
       (fn.variables || []).forEach((v, i) => {
