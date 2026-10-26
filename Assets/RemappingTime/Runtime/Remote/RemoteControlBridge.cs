@@ -11,13 +11,13 @@ namespace RemappingTime.Remote
     /// Two pages are served from the headset:
     /// <list type="bullet">
     /// <item><c>http://&lt;headset-ip&gt;:8080/</c>: the <b>remote</b>. A big hold button (and a Trigger button
-    /// when the formulas use it) for onlookers, so a visitor can slow the wearer's world from their phone.
+    /// when the formulas use it), so someone else can slow the wearer's world from a phone.
     /// Remote clients can only send inputs and fire pulses.</item>
     /// <item><c>http://&lt;headset-ip&gt;:8080/operator</c>: the <b>operator</b> console. Pick policies and presets,
     /// tune every parameter, and watch live telemetry (δ, r, u, α). Protected by an optional PIN.</item>
     /// </list>
-    /// All phones/laptops must be on the same network as the headset. Conference Wi-Fi often isolates
-    /// clients from each other; a small travel router or a phone hotspot avoids that.
+    /// All phones/laptops must be on the same network as the headset. Some networks (campus, public Wi-Fi) block
+    /// devices from reaching each other; a home router or a phone hotspot avoids that.
     /// </summary>
     public sealed class RemoteControlBridge : MonoBehaviour
     {

@@ -2,8 +2,7 @@
 
 Real-time **time remapping** for video see-through AR on Meta Quest 3 (see [Getting started](#getting-started)). The headset buffers what its
 cameras see and chooses, every frame, *which moment of the world to show you*: slow motion, freeze,
-rewind, fast-forward catch-up, time that only slows inside a virtual volume, or time that someone
-else controls from their phone.
+rewind, fast-forward catch-up, or time that only slows inside a virtual volume, all tunable live from a laptop.
 
 This is the demo system accompanying the UIST '26 paper
 [*Remapping Time in Augmented Reality*](https://nandi-zhang.github.io/static/media/uist-26-remapping-time.e45be34afbda688b1d12.pdf)
@@ -40,7 +39,7 @@ response to events**. That is what a *policy* does.
 | **Timeline gallery** | Several presets side by side on floating screens, all fed by the same live camera and reacting to the same input. |
 | **Water / honey** | A 35 cm refractive block of virtual water (or amber honey), reacting 4 cm outside its surface; formulas can read how deep a hand is inside it (`depth`, `inzone`) for pseudo-haptic "thick material" effects. |
 | **Status HUD** | A status display (delay, rate, phase, web address) that expands into a thumbstick-driven tuner with a live δ/r graph. |
-| **Web control** | The headset serves its own control pages. `/operator` (laptop): presets, formulas, all parameters, live telemetry. `/` (any phone): a big *hold to slow their world* button for onlookers. |
+| **Web control** | The headset serves its own control pages. `/operator` (laptop): presets, formulas, all parameters, live telemetry. `/` (phone): a big hold button, so someone else can slow your world. |
 | **Presets** | 21 built-in presets (10 main, 11 advanced) plus user presets saved on the device (formulas, variable names, drawn shapes and settings). |
 
 ---
@@ -60,7 +59,19 @@ The system buffers raw camera frames, so it needs Meta's **Passthrough Camera AP
 The headset needs **Horizon OS v74 or later** and **Developer Mode** to install the app: in the Meta Horizon phone app,
 open *Devices → (your headset) → Headset settings → Developer Mode*. This requires a free Meta developer account.
 
-### Unity setup
+### Option A: install the prebuilt APK (no Unity needed)
+
+1. Download `RemappingTime.apk` from the [latest release](https://github.com/nandi-zhang/RemappingTimeAR/releases/latest).
+2. Connect the headset to your computer by USB and accept the "Allow USB debugging" prompt inside it.
+3. Install the APK with one of these:
+   - [Meta Quest Developer Hub](https://developers.meta.com/horizon/documentation/unity/ts-odh/): drag the APK
+     onto the device panel.
+   - [adb](https://developer.android.com/tools/releases/platform-tools): `adb install -r RemappingTime.apk`.
+4. Continue with [First run](#first-run).
+
+### Option B: build from source
+
+#### Unity setup
 
 | | |
 |---|---|
@@ -69,7 +80,7 @@ open *Devices → (your headset) → Headset settings → Developer Mode*. This 
 | Packages | Installed automatically from [`Packages/manifest.json`](Packages/manifest.json) when the project opens: **Meta MR Utility Kit 83.0.3** (which brings in the Meta XR Core SDK), **XR Plugin Management 4.5.3** and **Oculus XR Plugin 4.5.2** |
 | Render pipeline | Built-in, linear colour space, ARM64, Android API level 32 (already set in the project) |
 
-### Build and install
+#### Build and install
 
 1. Clone the repository and open the folder in Unity Hub (*Add → Add project from disk*) with Unity 6000.0.61f1.
    The first import downloads the packages and takes a few minutes.
@@ -133,16 +144,16 @@ is ignored, since the remapping could not be seen there.
 The headset runs a small HTTP + WebSocket server on port **8080** (no internet, no app install).
 
 - `http://<headset-ip>:8080/operator` **operator** (laptop): pick presets, **type the formulas for u(t) and α(t)**,
-  tune knobs and effects, save presets, and watch δ(t), r(t), u(t) live. Set an **operator PIN** on the
-  *Remote Control Bridge* component before a public demo, so visitors cannot reconfigure things.
-- `http://<headset-ip>:8080/` **remote**, for onlookers: it shows only the controls the current formulas use. That is
-  a hold button if they read `hold`, and a Trigger button for `tap`.
+  tune knobs and effects, save presets, and watch δ(t), r(t), u(t) live. On a shared network you can set an
+  **operator PIN** on the *Remote Control Bridge* component.
+- `http://<headset-ip>:8080/` **remote** (phone): shows only the controls the current formulas use. That is a hold
+  button if they read `hold`, and a Trigger button for `tap`.
 
 **No phone?** A laptop works for everything: hold **Space** (on either page) to hold, **P** = trigger, **L** = snap to live.
 
-**Networking tip:** venue Wi-Fi usually isolates clients from each other. Bring a small travel router (or use a phone
-hotspot) and join the headset, laptop and visitors' phones to it. Remote inputs time out after 0.6 s, so a phone that
-drops off the network never leaves the wearer stuck in slow motion.
+**If the page doesn't load:** some networks (campus, office, public Wi-Fi) block devices from reaching each other.
+Use a home router or a phone hotspot for both the headset and the laptop. Web inputs time out after 0.6 s, so a
+dropped connection never leaves the wearer stuck in slow motion.
 
 The protocol is documented in [`Docs/PROTOCOL.md`](Docs/PROTOCOL.md) if you want to drive the system from your own
 code (Python, TouchDesigner, a game server, …).
@@ -336,16 +347,16 @@ round could set when = `noise(t) > 0.8`, log when `Main.Phase == "on"`, and scor
 
 ---
 
-## Running a demo booth
+## Tips
 
-- **Power and heat:** two cameras at 60 Hz plus a 1.2 GB frame buffer is a heavy load. Use a battery strap or a
-  long USB-C cable to a power bank, and give the headset breaks. Lower *Buffer seconds* or *Storage scale* on
-  `StereoPassthroughCapture` if it throttles.
-- **Network:** bring your own router (see above), and set the operator PIN.
-- **Lighting:** hand tracking needs decent light. For fast motions (hitstop, slashes), hand visitors the right controller.
-- **Reset:** B snaps to live; the operator page has *Snap to live* and per-policy *Reset*. Re-centre with the Meta button.
-- **Comfort:** keep slowdowns to a few seconds, use the *Bypass* grip to show "before/after", and remind visitors that the
-  world they see during remapping is not the present one (don't walk while slowed).
+- **Safety:** while time is remapped you are not seeing the present. Stand or sit still, and don't walk while slowed.
+- **Power and heat:** two cameras at 60 Hz plus a 1.2 GB frame buffer is a heavy load, so expect the battery to drain
+  quickly and the headset to get warm. If it throttles, lower *Buffer seconds* or *Storage scale* on
+  `StereoPassthroughCapture`.
+- **Lighting:** hand tracking needs decent light. For fast motions (*Hitstop punch*), the right controller is more
+  reliable than a bare hand.
+- **Reset:** B snaps back to live, as does *Snap to live* on the operator page. Re-centre with the Meta button.
+- **Before and after:** hold the left grip (*Bypass*) to compare with the live view.
 
 ## Known limitations
 

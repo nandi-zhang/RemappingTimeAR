@@ -12,7 +12,7 @@ namespace RemappingTime
         public float Hold;
         /// <summary>Hold strength from the headset controller trigger only.</summary>
         public float LocalHold;
-        /// <summary>Hold strength from web clients only (e.g. a visitor's phone).</summary>
+        /// <summary>Hold strength from web clients only (e.g. a phone).</summary>
         public float RemoteHold;
         /// <summary>True on the frame an "action" was requested (A button or web). Policies may use it to fire a pulse.</summary>
         public bool Action;
