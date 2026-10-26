@@ -29,18 +29,38 @@ response to events**. That is what a *policy* does.
 
 ## Features
 
-| | |
-|---|---|
-| **Head reprojection** | Every buffered frame stores the pose of the camera that captured it and is drawn *where it was captured*: on a world-fixed plane by default, or bent to the measured scene depth (experimental). The past stays put in the world as you move your head. See [Head reprojection](#head-reprojection). |
-| **Soft canvas** | Feathered edges blend into the live passthrough. When nothing is remapped the canvas fades out entirely, leaving the full-quality system passthrough. |
-| **Smooth slow motion** | Neighbouring frames are cross-faded, but it may induce motion blurs. |
-| **u(t) and α(t) as formulas** | Type the trigger, u and α as formulas on the operator page (e.g. `on ? uon * smoothstep(0, k1, ton) : 0`) and see the result instantly. 10 main presets (hold to slow, echo trails, time lens, ghost, motion slow-mo, time wobble, constant u and α, water, honey) plus 11 advanced ones (freeze, rewind, hitstop, drawn shapes and more). |
-| **Effects, organised by the design space** | *Representation*: replace, ghost (semi-transparent) or echo trails (chronophotography). *Scope*: the whole view or a *time lens* around your hand. *Transparency*: speed colour and an edge glow signal the remapping (one toggle), or switch them off for low-transparency designs. |
-| **Timeline gallery** | Several presets side by side on floating screens, all fed by the same live camera and reacting to the same input. |
-| **Water / honey** | A 35 cm refractive block of virtual water (or amber honey), reacting 4 cm outside its surface; formulas can read how deep a hand is inside it (`depth`, `inzone`) for pseudo-haptic "thick material" effects. |
-| **Status HUD** | A status display (delay, rate, phase, web address) that expands into a thumbstick-driven tuner with a live δ/r graph. |
-| **Web control** | The headset serves its own control pages. `/operator` (laptop): presets, formulas, all parameters, live telemetry. `/` (phone): a big hold button, so someone else can slow your world. |
-| **Presets** | 21 built-in presets (10 main, 11 advanced) plus user presets saved on the device (formulas, variable names, drawn shapes and settings). |
+Recorded through the headset. Click a clip for the full-quality video.
+
+<table>
+<tr>
+<td width="33%" valign="top"><a href="Media/hold_to_slow.mp4"><img src="Media/previews/hold_to_slow.webp" alt="Hold to slow" width="100%"></a><br><b>Hold to slow</b><br><sub>Hold the right trigger and the world plays 5× slower. Release it and the world fast-forwards back to the present.</sub></td>
+<td width="33%" valign="top"><a href="Media/echo_trail.mp4"><img src="Media/previews/echo_trail.webp" alt="Echo trails" width="100%"></a><br><b>Echo trails</b><br><sub>Hold to slow, with earlier moments trailing behind moving things, like chronophotography.</sub></td>
+<td width="33%" valign="top"><a href="Media/ghost.mp4"><img src="Media/previews/ghost.webp" alt="Ghost" width="100%"></a><br><b>Ghost</b><br><sub>The slowed world appears as a translucent ghost over the live one.</sub></td>
+</tr>
+<tr>
+<td width="33%" valign="top"><a href="Media/hand_anchored_lens.mp4"><img src="Media/previews/hand_anchored_lens.webp" alt="Time lens" width="100%"></a><br><b>Time lens</b><br><sub>Only a circle around your hand is slowed. The rest of the world stays live.</sub></td>
+<td width="33%" valign="top"><a href="Media/freeze.mp4"><img src="Media/previews/freeze.webp" alt="Freeze frame" width="100%"></a><br><b>Freeze frame</b><br><sub>Hold to stop the world (u = 1). Release it and the world catches up.</sub></td>
+<td width="33%" valign="top"><a href="Media/bullet_time.mp4"><img src="Media/previews/bullet_time.webp" alt="Bullet time" width="100%"></a><br><b>Bullet time</b><br><sub>Almost frozen (12× slower) while held, then a long, dramatic fast-forward.</sub></td>
+</tr>
+<tr>
+<td width="33%" valign="top"><a href="Media/motion_slowmo.mp4"><img src="Media/previews/motion_slowmo.webp" alt="Motion slow-mo" width="100%"></a><br><b>Motion slow-mo</b><br><sub>No button: a fast hand movement slows the world, which recovers when you stop.</sub></td>
+<td width="33%" valign="top"><a href="Media/outrun_yourself.mp4"><img src="Media/previews/outrun_yourself.webp" alt="Outrun yourself" width="100%"></a><br><b>Outrun yourself</b><br><sub>The faster your hand moves, the slower its image, so your hand leaves its image behind.</sub></td>
+<td width="33%" valign="top"><a href="Media/time_wobble.mp4"><img src="Media/previews/time_wobble.webp" alt="Time wobble" width="100%"></a><br><b>Time wobble</b><br><sub>Always on: time breathes slower and faster, one breath every 2 s.</sub></td>
+</tr>
+<tr>
+<td width="33%" valign="top"><a href="Media/stutter.mp4"><img src="Media/previews/stutter.webp" alt="Stutter" width="100%"></a><br><b>Stutter</b><br><sub>Always on: brief freezes on a beat, like a skipping video.</sub></td>
+<td width="33%" valign="top"><a href="Media/water.mp4"><img src="Media/previews/water.webp" alt="Water" width="100%"></a><br><b>Water</b><br><sub>Time slows inside a block of virtual water, the deeper your hand, the slower: a pseudo-haptic thick material.</sub></td>
+<td width="33%" valign="top"><a href="Media/honey.mp4"><img src="Media/previews/honey.webp" alt="Honey" width="100%"></a><br><b>Honey</b><br><sub>Thicker still: deep, slow and slow to let go.</sub></td>
+</tr>
+<tr>
+<td width="33%" valign="top"><a href="Media/gallery.mp4"><img src="Media/previews/gallery.webp" alt="Timeline gallery" width="100%"></a><br><b>Timeline gallery</b><br><sub>Several presets side by side, all fed by the same camera and reacting to the same input.</sub></td>
+<td width="33%" valign="top"><a href="Media/depth_reprojection.mp4"><img src="Media/previews/depth_reprojection.webp" alt="Depth reprojection" width="100%"></a><br><b>Depth reprojection</b><br><sub>Past frames are bent to the measured scene depth, so near and far things stay put as you move (experimental; see <a href="#head-reprojection">Head reprojection</a>).</sub></td>
+<td width="33%" valign="top"><a href="Media/menu.mp4"><img src="Media/previews/menu.webp" alt="In-headset tuner" width="100%"></a><br><b>In-headset tuner</b><br><sub>The left thumbstick tunes any parameter, with a live graph of the delay δ and the playback rate r.</sub></td>
+</tr>
+</table>
+
+Each of these is just three formulas (when, u and α) that you can retype live from a laptop: see
+[Designing u(t) and α(t)](#designing-ut-and-αt) and [Web control](#web-control).
 
 ---
 
@@ -260,6 +280,10 @@ practice the difference was hard to perceive, so D is not exposed in the UIs.
 ### Depth (experimental)
 
 ![Depth: a grid pushed out to the measured depth](Docs/figures/reprojection_3_depth.gif)
+
+On the headset:
+
+<a href="Media/depth_reprojection.mp4"><img src="Media/previews/depth_reprojection.webp" alt="Depth reprojection on the headset" width="480"></a>
 
 Each frame also stores the depth map from Meta's Depth API, with M_depth, the matrix from world space to the depth
 map. The frame is drawn as a 48 × 36 grid, and the vertex shader moves every vertex along its camera ray to the
