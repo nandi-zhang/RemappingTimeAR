@@ -50,7 +50,7 @@ namespace RemappingTime
             "1 while 'when' is true",
             "seconds since 'when' became true (0 while off)",
             "seconds since 'when' became false (0 while on)",
-            "seconds since the last Trigger press (A button / web)",
+            "seconds since the last Tap (A button / web)",
             "self-defined variable 1 (0–10)", "self-defined variable 2 (0–10)", "self-defined variable 3 (0–10)",
             "u when triggered (slider)", "α when triggered (slider)", "α when released (slider)",
         };

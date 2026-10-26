@@ -11,7 +11,7 @@ namespace RemappingTime
     /// <list type="bullet">
     /// <item>Right index trigger: hold (analog)</item>
     /// <item>A: action (e.g. fire a pulse or a freeze)</item>
-    /// <item>B: snap to live</item>
+    /// <item>B: snap back to the present</item>
     /// <item>Left grip (hold): bypass, i.e. show live for a quick A/B comparison</item>
     /// </list>
     /// In the Editor, the keyboard also works: Space = hold, Enter = action, Backspace = live.

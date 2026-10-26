@@ -183,13 +183,13 @@
     <div class="card">
       <h2>Actions</h2>
       <div class="rowf">
-        <button class="btn" data-action="live" title="Fast-forward to real time now (L)">Snap to live</button>
-        <button class="btn" data-action="trigger" title="Sets 'tap' to 0, for formulas that react to it (P / A button)">Trigger</button>
+        <button class="btn" data-action="live" title="Catch up to the present now (L)">Back to present</button>
+        <button class="btn" data-action="trigger" title="Sets 'tap' to 0, for formulas that react to it (P / A button)">Tap</button>
         <button class="btn" data-action="moveWater" id="moveWater" title="Place the water block in front of the wearer">Move water in front</button>
         <button class="btn" data-action="resetKnobs" title="Put the u and α sliders and self-defined variables back to the preset's values">Reset values</button>
       </div>
       <div style="margin-top:10px"><button class="btn hold" id="hold">Hold (or hold Space): drives 'hold' in the formulas</button></div>
-      <div class="muted" style="margin-top:6px; font-size:12px">Keys: Space = hold · P = trigger · L = snap to live</div>
+      <div class="muted" style="margin-top:6px; font-size:12px">Keys: Space = hold · P = tap · L = back to present</div>
     </div>
 
     <div id="tunables" class="col"></div>
@@ -704,7 +704,7 @@
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => hold.addEventListener(t, releaseHold));
 
   // Keyboard, so the wearer's time can be driven from the laptop:
-  // Space (hold) = slow, P = pulse / freeze, L = snap to live. Ignored while typing in a text field.
+  // Space (hold) = slow, P = tap, L = back to the present. Ignored while typing in a text field.
   const typing = e => e.target && (e.target.type === 'text' || e.target.type === 'password' || e.target.tagName === 'SELECT');
   document.addEventListener('keydown', e => {
     if (typing(e)) return;

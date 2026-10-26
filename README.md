@@ -108,15 +108,15 @@ Unity -batchmode -projectPath . -buildTarget Android -executeMethod RemappingTim
 3. Put the headset, and the laptop or phone you want to control it from, on the same Wi-Fi network.
 4. The HUD shows the control address, e.g. `http://192.168.1.23:8080/`. Open `…/operator` on a laptop for the
    full control panel, or the plain address on a phone for a simple hold button.
-5. Try *Hold to slow*: hold the right index trigger (or Space on the web page) to slow the world, then release to
-   fast-forward back to live. Then work through the other presets on the operator page.
+5. Try *Hold to slow*: hold the right index trigger (or Space on the web page) to slow the world, then release it
+   and the world fast-forwards back to the present. Then work through the other presets on the operator page.
 
 ---
 
 ## Controls
 
 > **The right index trigger starts the remapping.** Hold it to slow (or freeze, or rewind) the world; release it
-> and the world fast-forwards back to live. This is how most presets work. A few presets start on their own instead:
+> and the world fast-forwards back to the present. This is how most presets work. A few presets start on their own instead:
 > *Motion slow-mo* reacts to fast hand motion, *Water* and *Honey* to a hand inside the volume, and *Time wobble* and
 > *Constant u, α* are always on. The HUD's yellow **start:** line always tells you what starts the current preset.
 
@@ -124,10 +124,10 @@ Unity -batchmode -projectPath . -buildTarget Android -executeMethod RemappingTim
 
 | Input | Action |
 |---|---|
-| **Index trigger (hold)** | **Start the remapping** (the `hold` input; squeezing harder matters only in *Hold to slow (analog)*) |
-| A | Trigger: resets `tap` to 0 (e.g. a manual freeze in *Hitstop punch*) |
-| B | Snap back to live |
-| Grip (hold) | Move the water block to your right hand |
+| **Index trigger** (front, index finger): hold | **Start the remapping**; release to return to the present. Squeezing harder matters only in *Hold to slow (analog)*. |
+| A | **Tap**: a one-off event (`tap`), e.g. a manual freeze in *Hitstop punch* |
+| B | Snap back to the present (a very quick catch-up, about 0.2 s) |
+| Grip button (side, middle finger): hold | *Water / Honey only:* carry the water block to your right hand |
 
 Hand tracking works too. Motion presets read the speed of **both hands**: whichever index fingertip (or controller,
 if held) is moving fastest *inside the cameras' view* counts. Motion outside the view is ignored, since the remapping
@@ -142,10 +142,10 @@ could not be seen there.
 | Thumbstick ←/→ | Change value (hold to accelerate) |
 | Thumbstick click | Reset to default |
 | X | Next main preset |
-| Grip (hold) | **Bypass**: show live for an instant A/B comparison |
+| Grip button (side, middle finger): hold | **Bypass**: show the present (live) while held, for a before/after comparison |
 
 **Without a controller in hand:** hold **Space** on the operator page (or the big button on the phone page) instead of
-the trigger. In the Editor (play mode over Link): Space = hold, Enter = trigger, Backspace = live.
+the trigger. In the Editor (play mode over Link): Space = hold, Enter = tap, Backspace = back to the present.
 
 ## Web control
 
@@ -155,9 +155,9 @@ The headset runs a small HTTP + WebSocket server on port **8080** (no internet, 
   tune knobs and effects, save presets, and watch δ(t), r(t), u(t) live. On a shared network you can set an
   **operator PIN** on the *Remote Control Bridge* component.
 - `http://<headset-ip>:8080/` **remote** (phone): shows only the controls the current formulas use. That is a hold
-  button if they read `hold`, and a Trigger button for `tap`.
+  button if they read `hold`, and a Tap button for `tap`.
 
-**No phone?** A laptop works for everything: hold **Space** (on either page) to hold, **P** = trigger, **L** = snap to live.
+**No phone?** A laptop works for everything: hold **Space** (on either page) to hold, **P** = tap, **L** = back to the present.
 
 **If the page doesn't load:** some networks (campus, office, public Wi-Fi) block devices from reaching each other.
 Use a home router or a phone hotspot for both the headset and the laptop. Web inputs time out after 0.6 s, so a
@@ -183,7 +183,7 @@ where the sliders appear as `uon`, `aon` and `aoff`:
 
 **Variables:** `t` time · `d` current delay δ · `B` buffer budget · `hold` 0–1 · `speed` fastest hand in
 view (m/s) · `lspeed`, `rspeed` per hand · `depth` how deep a hand is in the water (m) · `inzone` · `on` · `ton` · `toff`
-· `tap` seconds since the last Trigger · `uon aon aoff` the three sliders · `k1 k2 k3` **self-defined variables** (0–10,
+· `tap` seconds since the last Tap (A) · `uon aon aoff` the three sliders · `k1 k2 k3` **self-defined variables** (0–10,
 for any extra number a formula needs; each preset names its own, and they get sliders only when a formula uses them).
 
 **Language:** `+ − * / % ^`, comparisons, `&& || !`, `c ? a : b`, `pi`, and `sin cos tan abs sqrt exp log floor ceil
@@ -350,7 +350,7 @@ public sealed class RaiseHandPolicy : RemapPolicy
 ### Building a game or study on top
 
 Drive everything through `TimeRemapEngine`: `ApplyPreset`, `SetExpression("u", "...", out err)`, `SetTunable`,
-`Inputs.QueueAction()` (the Trigger), and read `Main.Delay`, `Main.Rate`, `Main.Phase`. For example, a *spot-the-warp*
+`Inputs.QueueAction()` (the Tap), and read `Main.Delay`, `Main.Rate`, `Main.Phase`. For example, a *spot-the-warp*
 round could set when = `noise(t) > 0.8`, log when `Main.Phase == "on"`, and score the wearer's trigger presses against it.
 
 ---
@@ -363,7 +363,7 @@ round could set when = `noise(t) > 0.8`, log when `Main.Phase == "on"`, and scor
   `StereoPassthroughCapture`.
 - **Lighting:** hand tracking needs decent light. For fast motions (*Hitstop punch*), the right controller is more
   reliable than a bare hand.
-- **Reset:** B snaps back to live, as does *Snap to live* on the operator page. Re-centre with the Meta button.
+- **Reset:** B snaps back to the present, as does *Back to present* on the operator page. Re-centre with the Meta button.
 - **Before and after:** hold the left grip (*Bypass*) to compare with the live view.
 
 ## Known limitations
