@@ -6,15 +6,15 @@ rewind, fast-forward catch-up, or time that only slows inside a virtual volume, 
 
 This is the demo system accompanying the UIST '26 paper
 [*Remapping Time in Augmented Reality*](https://nandi-zhang.github.io/static/media/uist-26-remapping-time.e45be34afbda688b1d12.pdf)
-(Nandi Zhang and Yukang Yan, University of Rochester). It adds head reprojection, smoother visuals, a
+(Nandi Zhang and Yukang Yan, University of Rochester). Compared to the implementation in the paper, it adds head reprojection, smoother visuals, a
 policy framework for building your own effects, an in-headset tuner, and a browser-based control panel.
 
 ---
 
-## The model in one paragraph
+## The model explained
 
-The system tracks one number, the temporal offset **δ(t)**: how many seconds the displayed world lags
-behind reality. It evolves as
+The system tracks and updates the temporal offset **δ(t)**: how many seconds the displayed world lags
+behind reality (or ahead of reality when it's < 0). It evolves as
 
 ```
 dδ/dt = u(t) − α(t)·δ(t)        displayed time  s(t) = t − δ(t)        playback rate  r = 1 − u + α·δ
@@ -33,7 +33,7 @@ response to events**. That is what a *policy* does.
 |---|---|
 | **Head reprojection** | Every buffered frame stores the pose of the camera that captured it and is drawn *where it was captured*: on a world-fixed plane by default, or bent to the measured scene depth (experimental). The past stays put in the world as you move your head. See [Head reprojection](#head-reprojection). |
 | **Soft canvas** | Feathered edges blend into the live passthrough. When nothing is remapped the canvas fades out entirely, leaving the full-quality system passthrough. |
-| **Smooth slow motion** | Neighbouring frames are cross-faded, so 5× slow motion is not a 12 fps slideshow. |
+| **Smooth slow motion** | Neighbouring frames are cross-faded, but it may induce motion blurs. |
 | **u(t) and α(t) as formulas** | Type the trigger, u and α as formulas on the operator page (e.g. `on ? uon * smoothstep(0, k1, ton) : 0`) and see the result instantly. 10 main presets (hold to slow, echo trails, time lens, ghost, motion slow-mo, time wobble, constant u and α, water, honey) plus 11 advanced ones (freeze, rewind, hitstop, drawn shapes and more). |
 | **Effects, organised by the design space** | *Representation*: replace, ghost (semi-transparent) or echo trails (chronophotography). *Scope*: the whole view or a *time lens* around your hand. *Transparency*: speed colour and an edge glow signal the remapping (one toggle), or switch them off for low-transparency designs. |
 | **Timeline gallery** | Several presets side by side on floating screens, all fed by the same live camera and reacting to the same input. |
