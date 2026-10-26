@@ -1,6 +1,6 @@
 # Remapping Time in AR
 
-Real-time **time remapping** for video see-through AR on Meta Quest 3. The headset buffers what its
+Real-time **time remapping** for video see-through AR on Meta Quest 3 (see [Getting started](#getting-started)). The headset buffers what its
 cameras see and chooses, every frame, *which moment of the world to show you*: slow motion, freeze,
 rewind, fast-forward catch-up, time that only slows inside a virtual volume, or time that someone
 else controls from their phone.
@@ -32,7 +32,7 @@ response to events**. That is what a *policy* does.
 
 | | |
 |---|---|
-| **Head reprojection** | Every buffered frame stores the pose of the camera that captured it and is drawn *where it was captured*. Rotation is fully compensated and translation is exact at a chosen depth, so the past stays put in the world as you move your head. Toggle it off to compare with a head-locked image. |
+| **Head reprojection** | Every buffered frame stores the pose of the camera that captured it and is drawn *where it was captured*: on a world-fixed plane by default, or bent to the measured scene depth (experimental). The past stays put in the world as you move your head. See [Head reprojection](#head-reprojection). |
 | **Soft canvas** | Feathered edges blend into the live passthrough. When nothing is remapped the canvas fades out entirely, leaving the full-quality system passthrough. |
 | **Smooth slow motion** | Neighbouring frames are cross-faded, so 5× slow motion is not a 12 fps slideshow. |
 | **u(t) and α(t) as formulas** | Type the trigger, u and α as formulas on the operator page (e.g. `on ? uon * smoothstep(0, k1, ton) : 0`) and see the result instantly. 10 main presets (hold to slow, echo trails, time lens, ghost, motion slow-mo, time wobble, constant u and α, water, honey) plus 11 advanced ones (freeze, rewind, hitstop, drawn shapes and more). |
@@ -41,23 +41,47 @@ response to events**. That is what a *policy* does.
 | **Water / honey** | A 35 cm refractive block of virtual water (or amber honey), reacting 4 cm outside its surface; formulas can read how deep a hand is inside it (`depth`, `inzone`) for pseudo-haptic "thick material" effects. |
 | **Status HUD** | A status display (delay, rate, phase, web address) that expands into a thumbstick-driven tuner with a live δ/r graph. |
 | **Web control** | The headset serves its own control pages. `/operator` (laptop): presets, formulas, all parameters, live telemetry. `/` (any phone): a big *hold to slow their world* button for onlookers. |
-| **Presets** | 22 built-in presets plus user presets saved on the device (formulas, knob names and settings). |
+| **Presets** | 21 built-in presets (10 main, 11 advanced) plus user presets saved on the device (formulas, variable names, drawn shapes and settings). |
 
 ---
 
-## Requirements
+## Getting started
 
-- Meta Quest 3 / 3S running Horizon OS v74 or later (Passthrough Camera API).
-- Unity **6000.0.61f1** with Android Build Support (OpenJDK, SDK & NDK).
-- Packages (resolved automatically from `Packages/manifest.json`): Meta MR Utility Kit 83 (pulls in Meta XR Core SDK), XR Plugin Management, Oculus XR Plugin.
+### Headsets
 
-## Quick start
+The system buffers raw camera frames, so it needs Meta's **Passthrough Camera API**, which only some headsets offer.
 
-1. Open this folder in Unity Hub with Unity 6000.0.61f1. The first import takes a few minutes.
-2. Menu **Remapping Time → Create Demo Scene**. This generates `Assets/RemappingTime/Scenes/RemappingTimeDemo.unity` and adds it to Build Settings.
-3. Menu **Remapping Time → Build APK**, then `adb install -r Builds/RemappingTime.apk`. You can also use *File → Build And Run* with the headset connected.
-4. Launch **Remapping Time** on the headset and allow the camera permission on first run.
-5. The HUD shows the control URL, e.g. `http://192.168.1.23:8080/`. Open it on a phone, or add `/operator` on a laptop.
+| Headset | Status |
+|---|---|
+| **Meta Quest 3** | Supported. Developed and tested on it. |
+| **Meta Quest 3S** | Should work (it supports the Passthrough Camera API and the Depth API) but is untested. |
+| Meta Quest Pro, Quest 2 | **Not supported.** The Passthrough Camera API is not available on them. |
+
+The headset needs **Horizon OS v74 or later** and **Developer Mode** to install the app: in the Meta Horizon phone app,
+open *Devices → (your headset) → Headset settings → Developer Mode*. This requires a free Meta developer account.
+
+### Unity setup
+
+| | |
+|---|---|
+| Unity | **6000.0.61f1** (Unity 6 LTS). Other 6000.0.x versions will probably work but are untested. |
+| Unity modules | **Android Build Support**, including *OpenJDK* and *Android SDK & NDK Tools* (tick them when installing the editor in Unity Hub) |
+| Packages | Installed automatically from [`Packages/manifest.json`](Packages/manifest.json) when the project opens: **Meta MR Utility Kit 83.0.3** (which brings in the Meta XR Core SDK), **XR Plugin Management 4.5.3** and **Oculus XR Plugin 4.5.2** |
+| Render pipeline | Built-in, linear colour space, ARM64, Android API level 32 (already set in the project) |
+
+### Build and install
+
+1. Clone the repository and open the folder in Unity Hub (*Add → Add project from disk*) with Unity 6000.0.61f1.
+   The first import downloads the packages and takes a few minutes.
+2. Switch the platform to Android: *File → Build Profiles → Android → Switch Platform*.
+3. If *Meta XR → Project Setup Tool* lists issues, click *Fix All*.
+4. Optional: *Remapping Time → Create Demo Scene* regenerates `Assets/RemappingTime/Scenes/RemappingTimeDemo.unity`.
+   The scene is included in the repository, and *Build APK* rebuilds it automatically if it is out of date.
+5. Connect the headset by USB, accept the "Allow USB debugging" prompt inside it, then either
+   - choose *Remapping Time → Build APK* and run `adb install -r Builds/RemappingTime.apk`, or
+   - use *File → Build And Run*.
+
+   [Meta Quest Developer Hub](https://developers.meta.com/horizon/documentation/unity/ts-odh/) can install APKs too.
 
 Batch-mode equivalents (useful for CI):
 
@@ -65,6 +89,16 @@ Batch-mode equivalents (useful for CI):
 Unity -batchmode -projectPath . -buildTarget Android -executeMethod RemappingTime.EditorTools.DemoSceneBuilder.BuildFromCommandLine
 Unity -batchmode -projectPath . -buildTarget Android -executeMethod RemappingTime.EditorTools.DemoBuild.BuildFromCommandLine
 ```
+
+### First run
+
+1. On the headset, open *Library → Unknown sources → Remapping Time*.
+2. Allow the **camera** permission (needed) and the **spatial data** permission (needed only for depth reprojection).
+3. Put the headset, and the laptop or phone you want to control it from, on the same Wi-Fi network.
+4. The HUD shows the control address, e.g. `http://192.168.1.23:8080/`. Open `…/operator` on a laptop for the
+   full control panel, or the plain address on a phone for a simple hold button.
+5. Try *Hold to slow*: hold the right index trigger (or Space on the web page) to slow the world, then release to
+   fast-forward back to live. Then work through the other presets on the operator page.
 
 ---
 
@@ -171,34 +205,62 @@ Presets come in two lists. The **main presets** are the most representative desi
 The headset's X button steps through the main presets; the operator page lists both. Presets saved from the operator page live in
 `/sdcard/Android/data/org.remappingtime.demo/files/remapping_presets.json`.
 
-### Head reprojection
+---
 
-*Display → Head reprojection* has three modes:
+## Head reprojection
 
-- **Depth (experimental)**: each buffered frame stores the depth map from Meta's Depth API, and the frame is drawn as a grid
-  whose points are pushed out to the scene's measured depth along their camera rays. Near and far things both stay put
-  as you move or turn your head. Limitations: the depth map is low resolution and smoothed, so sharp depth edges (a hand in
-  front of a far wall) stretch slightly, and fast-moving objects lag in the depth sensor. Where there is no depth, the
-  plane below is used. In practice alignment is very good, but fine details break up along the coarse depth mesh. Requires the *spatial data* permission (asked on first launch); the operator page's Diagnostics
-  card shows `depth: … frames with depth N%`.
-- **Flat plane** (default): frames are drawn on one plane at the **projection distance** D. Exact for surfaces at D; elsewhere any
-  camera movement between capture and display shows as parallax ∝ movement × |1/D − 1/depth|, including during head
-  rotation, because the cameras sit in front of the neck's pivot. D is fixed at 1 m (presets for close-up work such as
-  the water use 0.6 m); in practice the difference was hard to perceive, so it is not exposed in the UIs.
-- **Off**: the image follows the head (no reprojection).
+Every buffered frame is stored with the pose of the camera that captured it, **H_cap**. By the time the frame is
+shown, the head has usually moved to **H_now**. *Display → Head reprojection* decides where the frame is drawn.
 
-How each mode places a buffered frame while the head moves after it was captured (top view, plus where the wearer
-sees three things at different depths compared to the live passthrough):
+**How to read the figures.** The left side is a top view: the grey dashed head is H_cap and the dark head is H_now.
+The thin grey lines are the camera rays that recorded three points at different depths: a hand (0.5 m), a cup (1 m)
+and a wall (2.6 m). The right side shows the direction in which the wearer sees each point. A hollow circle is
+where the point really is (the live passthrough), a filled dot is where the remapped frame shows it, and the
+number is the angle between them. **K** is the camera intrinsics, so K⁻¹[u v 1]ᵀ is the ray through pixel (u, v).
+Each loop turns the head, then moves it sideways, then does both.
 
-| Off | Flat plane | Depth (experimental) |
-|---|---|---|
-| ![Off](Docs/figures/reprojection_1_off.gif) | ![Flat plane](Docs/figures/reprojection_2_flat.gif) | ![Depth](Docs/figures/reprojection_3_depth.gif) |
+### Off
 
-`H_cap` is the camera pose stored with the frame, `H_now` the current one, and `K` the camera intrinsics. The figures are a
-simplified 2D model (one camera, 9 cm in front of the neck pivot); regenerate them with
+![Off: the frame is pinned to the head](Docs/figures/reprojection_1_off.gif)
+
+The frame is pinned to the head: every point keeps the camera coordinates it had at capture time and is shown
+relative to the *current* head, x_shown = H_now H_cap⁻¹ x. Everything is misaligned as soon as the head moves, so
+this only suits viewing with a still head.
+
+### Flat plane (default)
+
+![Flat plane: a world-fixed quad at the capture pose](Docs/figures/reprojection_2_flat.gif)
+
+The frame is a quad fixed in the world at the capture pose, D = 1 m in front of where the camera was. Each vertex
+is v = H_cap (D K⁻¹[u v 1]ᵀ), and the quad is then rendered from the current head like any other object. Points at
+distance D stay put. Nearer and farther points slip by parallax, roughly in proportion to
+camera movement × |1/D − 1/depth|. A pure head turn causes a little parallax too, because the cameras sit about
+9 cm in front of the neck's pivot. D is fixed at 1 m (presets for close-up work, such as the water, use 0.6 m). In
+practice the difference was hard to perceive, so D is not exposed in the UIs.
+
+### Depth (experimental)
+
+![Depth: a grid pushed out to the measured depth](Docs/figures/reprojection_3_depth.gif)
+
+Each frame also stores the depth map from Meta's Depth API, with M_depth, the matrix from world space to the depth
+map. The frame is drawn as a 48 × 36 grid, and the vertex shader moves every vertex along its camera ray to the
+measured depth: v = H_cap (z(u, v) K⁻¹[u v 1]ᵀ). It finds z in four fixed-point steps,
+z ← z · d_map(M_depth v) / d(v): the depth stored in the map, divided by the depth of the current point, both seen
+from the depth camera. Near and far things then stay put.
+
+Limitations:
+
+- The depth map is low resolution and smoothed, so the grid stretches across depth edges (a hand in front of a
+  wall), and thin or fine details break up.
+- Fast-moving objects lag in the depth sensor.
+- Where there is no depth, the flat plane is used.
+
+Depth mode requires the *spatial data* permission. The operator page's Diagnostics card shows
+`depth: … frames with depth N%`.
+
+The planar-only version of the project is tagged `v0.1-planar-reprojection` in git. The figures come from a
+simplified 2D model (one camera, 9 cm in front of the neck pivot). Regenerate them with
 `python Docs/figures/make_reprojection_gifs.py Docs/figures`.
-
-The planar-only version of the project is tagged `v0.1-planar-reprojection` in git.
 
 ---
 
