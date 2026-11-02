@@ -204,12 +204,6 @@ namespace RemappingTime.Remote
 
         private static string FormulaName(string id) => id == "alpha" ? "α" : id;
 
-        private string KnobName(string tunableId)
-        {
-            FunctionPolicy fn = engine.Function;
-            if (fn == null) return "";
-            return tunableId == "fn.k1" ? fn.KnobName(1) : tunableId == "fn.k2" ? fn.KnobName(2) : tunableId == "fn.k3" ? fn.KnobName(3) : "";
-        }
 
         private void RunAction(string name)
         {
@@ -247,6 +241,9 @@ namespace RemappingTime.Remote
                         name = c.Name, label = c.Label, xMax = c.XMax, yMin = c.YMin, yMax = c.YMax,
                         xs = c.Xs, ys = c.Ys, used = fn.UsesCurve(c.Name),
                     }),
+                    vars = new[] { fn.VariableSource(1), fn.VariableSource(2), fn.VariableSource(3) },
+                    varNames = new[] { fn.VariableName(1), fn.VariableName(2), fn.VariableName(3) },
+                    varsUsed = new[] { fn.UsesVariable(1), fn.UsesVariable(2), fn.UsesVariable(3) },
                 };
                 function.functions = new List<string>(Expression.FunctionNames) { "c1", "c2" }.ToArray();
             }
@@ -268,7 +265,7 @@ namespace RemappingTime.Remote
                     id = t.Id, label = t.Label, group = t.Group, unit = t.Unit, help = t.Help,
                     min = t.Min, max = t.Max, step = t.Step, value = t.Value, def = t.Default,
                     options = t.Options ?? Array.Empty<string>(),
-                    unused = t.Unused, varName = KnobName(t.Id),
+                    unused = t.Unused,
                 });
             }
 

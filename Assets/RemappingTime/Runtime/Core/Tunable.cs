@@ -18,7 +18,7 @@ namespace RemappingTime
     {
         /// <summary>Stable identifier used by presets and the network protocol, e.g. "hold.speed".</summary>
         public readonly string Id;
-        /// <summary>Display name. Settable so presets can name generic knobs (e.g. "k1 (slowdown)").</summary>
+        /// <summary>Display name.</summary>
         public string Label { get; set; }
         /// <summary>UI grouping, e.g. "Policy", "View", "Tracking", "Engine".</summary>
         public string Group;

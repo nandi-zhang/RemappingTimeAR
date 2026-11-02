@@ -59,7 +59,7 @@
   .card h3 small { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 6px; }
   .param.unused .name, .param.unused .val, .param.unused input[type=range] { opacity: 0.5; }
   .param .name small.note { font-style: italic; }
-  .param .name input.kname { margin-left: 8px; width: 62%; padding: 2px 6px; font: inherit; border-style: dashed; }
+  .fxname { color: var(--muted); font-size: 12px; margin-left: 64px; }
   .varhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .card h2 small { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 6px; }
   .hand.drive span:first-child { color: var(--text); font-weight: 650; }
@@ -169,11 +169,18 @@
         </div>
 
         <div class="varhead">
-          <h3>Self-defined variables<small>· up to three numbers of your own (k1, k2, k3) for the formulas</small></h3>
+          <h3>Self-defined variables<small>· k1, k2, k3: a number or a formula that when, u and α can use</small></h3>
           <label class="switch" title="Show k1, k2 and k3"><input type="checkbox" id="varsOn"><span></span></label>
         </div>
         <div class="desc" id="varsNote"></div>
-        <div class="group" id="varParams"></div>
+        <div id="varFields">
+          <div class="fx"><label for="fxK1">k1 =</label><input type="text" id="fxK1" class="code" spellcheck="false" autocomplete="off"></div>
+          <div class="fxname" id="nameK1"></div><div class="fxerr" id="errK1"></div>
+          <div class="fx"><label for="fxK2" title="Can use k1">k2 =</label><input type="text" id="fxK2" class="code" spellcheck="false" autocomplete="off"></div>
+          <div class="fxname" id="nameK2"></div><div class="fxerr" id="errK2"></div>
+          <div class="fx"><label for="fxK3" title="Can use k1 and k2">k3 =</label><input type="text" id="fxK3" class="code" spellcheck="false" autocomplete="off"></div>
+          <div class="fxname" id="nameK3"></div><div class="fxerr" id="errK3"></div>
+        </div>
 
         <h3>Drawn shapes<small>· drag points · double-click to add or remove</small></h3>
         <div id="curves"></div>
@@ -191,7 +198,7 @@
         <button class="btn" data-action="live" title="Catch up to the present now (L)">Back to present</button>
         <button class="btn" data-action="trigger" title="Sets 'tap' to 0, for formulas that react to it (P / A button)">Tap</button>
         <button class="btn" data-action="moveWater" id="moveWater" title="Place the water block in front of the wearer">Move water in front</button>
-        <button class="btn" data-action="resetKnobs" title="Put the u and α sliders and self-defined variables back to the preset's values">Reset values</button>
+        <button class="btn" data-action="resetKnobs" title="Put the u and α sliders back to the preset's values">Reset values</button>
       </div>
       <div style="margin-top:10px"><button class="btn hold" id="hold">Hold (or hold Space): drives 'hold' in the formulas</button></div>
       <div class="muted" style="margin-top:6px; font-size:12px">Keys: Space = hold · P = tap · L = back to present</div>
@@ -334,6 +341,11 @@
     $('fnCard').style.display = hasFn ? '' : 'none';
     if (hasFn) {
       setFormula('fxWhen', fn.when); setFormula('fxU', fn.u); setFormula('fxAlpha', fn.alpha);
+      for (let k = 1; k <= 3; k++) {
+        setFormula('fxK' + k, (fn.vars || [])[k - 1]);
+        $('nameK' + k).textContent = (fn.varNames || [])[k - 1] || '';
+      }
+      showVars();
       $('trigText').textContent = fn.when || '–';
       $('trigHint').textContent = fn.triggerHint || '–';
       $('moveWater').style.display = fn.usesWater ? '' : 'none';
@@ -373,15 +385,39 @@
       c.wrap.querySelector('b').textContent = meta.title;
       c.wrap.querySelector('.lbl').textContent = `· ${meta.axis} · ${info.name}(x) in formulas`;
       const use = c.wrap.querySelector('.use'); use.innerHTML = '';
-      if (info.used) use.textContent = 'in use';
-      else if (meta.use) {
-        const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'Use this shape'; b.disabled = !isOp;
+      const b = document.createElement('button'); b.className = 'btn'; b.disabled = !isOp;
+      if (info.used) {
+        b.textContent = 'Stop using';
+        b.title = `Removes ${info.name}() from the formulas (back to what they were before, or the default)`;
+        b.onclick = () => stopUsingShape(info.name);
+        use.appendChild(b);
+      } else if (meta.use) {
+        b.textContent = 'Use this shape';
         b.title = `Sets ${meta.use.id === 'u' ? 'u' : 'α'} = ${meta.use.name}`;
-        b.onclick = () => send({ type: 'expr', id: meta.use.id, name: meta.use.name });
+        b.onclick = () => {
+          const fn = schema && schema.function;
+          if (fn) beforeShape[meta.use.id] = meta.use.id === 'u' ? fn.u : fn.alpha;
+          send({ type: 'expr', id: meta.use.id, name: meta.use.name });
+        };
         use.appendChild(b);
       }
       c.wrap.classList.toggle('unused', !info.used);
       if (c.drag < 0) { c.xs = info.xs.slice(); c.ys = info.ys.slice(); }   // never overwrite a curve being dragged
+    }
+  }
+
+  // Formulas replaced by "Use this shape", so "Stop using" can put them back.
+  const beforeShape = {};
+  const DEFAULT_FORMULA = { when: 'hold', u: 'on ? uon : 0', alpha: 'on ? aon : aoff', k1: '1', k2: '1', k3: '1' };
+  function stopUsingShape(name) {
+    const fn = schema && schema.function; if (!fn) return;
+    const calls = new RegExp('\\b' + name + '\\s*\\(');
+    const current = { when: fn.when, u: fn.u, alpha: fn.alpha, k1: (fn.vars || [])[0], k2: (fn.vars || [])[1], k3: (fn.vars || [])[2] };
+    for (const [id, text] of Object.entries(current)) {
+      if (!text || !calls.test(text)) continue;
+      const back = beforeShape[id] && !calls.test(beforeShape[id]) ? beforeShape[id] : DEFAULT_FORMULA[id];
+      delete beforeShape[id];
+      send({ type: 'expr', id, name: back });
     }
   }
 
@@ -474,8 +510,8 @@
   requestAnimationFrame(drawCurves);
 
   // ── Formulas ────────────────────────────────────────────────────────────
-  const formulaFields = { fxWhen: 'when', fxU: 'u', fxAlpha: 'alpha' };
-  const errorBox = { when: 'errWhen', u: 'errU', alpha: 'errAlpha', 'α': 'errAlpha' };
+  const formulaFields = { fxWhen: 'when', fxU: 'u', fxAlpha: 'alpha', fxK1: 'k1', fxK2: 'k2', fxK3: 'k3' };
+  const errorBox = { when: 'errWhen', u: 'errU', alpha: 'errAlpha', 'α': 'errAlpha', k1: 'errK1', k2: 'errK2', k3: 'errK3' };
 
   // Fill from the headset, but never overwrite what you are typing.
   function setFormula(id, text) {
@@ -495,7 +531,7 @@
   }
   // The headset answers each formula with "u = …" (applied) or "u: error message".
   function formulaNotice(m) {
-    const match = /^(when|u|α)( =|:)/.exec(m.text || '');
+    const match = /^(when|u|α|k[123])( =|:)/.exec(m.text || '');
     if (!match) return;
     const box = $(errorBox[match[1]]);
     box.textContent = m.level === 'error' ? m.text.slice(match[0].length).trim() : '';
@@ -508,10 +544,18 @@
     $('presetDelete').disabled = !o || o.dataset.cat !== 'saved' || !(schema && schema.role === 'operator');
   }
   $('presetSelect').addEventListener('change', showPresetDesc);
-  $('varsOn').addEventListener('change', () => {
-    store.set('rt.vars', $('varsOn').checked ? '1' : '0');
-    if (schema) buildTunables(schema.tunables, schema.role === 'operator');
-  });
+  // Self-defined variables: shown while the switch is on. The choice is remembered in this browser; until it is
+  // made, they show whenever the formulas use one. Switching off only hides them (the formulas keep working).
+  function showVars() {
+    const fn = schema && schema.function, used = ((fn && fn.varsUsed) || []).map((u, i) => u ? 'k' + (i + 1) : null).filter(Boolean);
+    const pref = store.get('rt.vars');
+    const on = pref === '1' || (pref === null && used.length > 0);
+    $('varsOn').checked = on;
+    $('varFields').style.display = on ? '' : 'none';
+    $('varsNote').textContent = !on && used.length ? `Hidden, but the formulas use ${used.join(' and ')}.` : '';
+    $('varsNote').style.display = $('varsNote').textContent ? '' : 'none';
+  }
+  $('varsOn').addEventListener('change', () => { store.set('rt.vars', $('varsOn').checked ? '1' : '0'); showVars(); });
 
   function buildTunables(list, isOp) {
     const root = $('tunables'); root.innerHTML = '';
@@ -522,22 +566,9 @@
       (groups[t.group] = groups[t.group] || []).push(t);
     }
     // The u/α sliders and self-defined variables live inside the "u and α" card, not in their own cards.
-    const basic = $('basicParams'), vars = $('varParams');
-    basic.innerHTML = ''; vars.innerHTML = '';
+    const basic = $('basicParams');
+    basic.innerHTML = '';
     for (const t of groups['Time'] || []) basic.appendChild(makeControl(t, isOp));
-    // Self-defined variables are switched on here (remembered in this browser). While the formulas use one,
-    // they stay on, so a value that is in effect can't be hidden.
-    const varList = groups['Self-defined'] || [];
-    const varsUsed = varList.some(t => !t.unused);
-    const varsOn = varsUsed || store.get('rt.vars') === '1';
-    const sw = $('varsOn');
-    sw.checked = varsOn; sw.disabled = !isOp || varsUsed;
-    sw.parentElement.title = varsUsed ? 'On while the current formulas use them' : 'Show k1, k2 and k3';
-    vars.style.display = varsOn ? '' : 'none';
-    $('varsNote').textContent = varsUsed ? 'The current formulas use them, so they stay on. Name them so you remember what each one does.'
-      : varsOn ? 'Write k1, k2 or k3 in a formula (e.g. u = on ? k1 : 0) and its slider takes effect. Unused ones are dimmed.'
-      : 'Off. Switch on to add up to three numbers of your own (k1, k2, k3) that your formulas can use.';
-    if (varsOn) for (const t of varList) vars.appendChild(makeControl(t, isOp));
     delete groups['Time']; delete groups['Self-defined'];
     // Effects follow the design space of time remapping; the rest are setup.
     const order = [
@@ -573,27 +604,10 @@
     const name = document.createElement('div'); name.className = 'name';
     name.textContent = t.label; name.title = (t.help ? t.help + '\n' : '') + 'Double-click to reset to default.';
     name.ondblclick = e => { if (isOp && e.target.tagName !== 'INPUT') { setParam(t.id, t.def); controls[t.id].update(t.def, true); } };
-    // Self-defined variables (fn.k1..k3): "k1" plus a name field (Enter or leaving the field applies; empty = no name).
-    const knob = /^fn\.k([123])$/.exec(t.id);
-    if (knob) {
-      const given = t.varName || '';
-      name.textContent = 'k' + knob[1];
-      name.title = 'Double-click to reset the value.';
-      const inp = document.createElement('input');
-      inp.type = 'text'; inp.className = 'kname'; inp.maxLength = 40; inp.value = given; inp.disabled = !isOp;
-      inp.placeholder = 'name it (optional)'; inp.spellcheck = false;
-      inp.addEventListener('keydown', e => {
-        if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
-        if (e.key === 'Escape') { inp.value = given; inp.blur(); }
-      });
-      inp.addEventListener('blur', () => { if (inp.value.trim() !== given) send({ type: 'knobLabel', id: knob[1], name: inp.value.trim() }); });
-      name.appendChild(inp);
-    }
     if (t.help) { const s = document.createElement('small'); s.textContent = t.help; name.appendChild(s); }
     if (t.unused) {
       const s = document.createElement('small'); s.className = 'note';
-      const short = t.id.replace(/^fn\./, '');
-      s.textContent = knob ? `not used yet: write ${short} in a formula to use it` : `not used by the current formulas (they don't read ${short})`;
+      s.textContent = `not used by the current formulas (they don't read ${t.id.replace(/^fn\./, '')})`;
       name.appendChild(s);
     }
     el.appendChild(name);

@@ -158,7 +158,7 @@ could not be seen there.
 | Input | Action |
 |---|---|
 | Y | HUD: minimal (default) → hidden → full |
-| Thumbstick ↑/↓ | Select a setting (sliders, self-defined variables, effects, display, …) |
+| Thumbstick ↑/↓ | Select a setting (u and α sliders, effects, display, …) |
 | Thumbstick ←/→ | Change value (hold to accelerate) |
 | Thumbstick click | Reset to default |
 | X | Next main preset |
@@ -203,18 +203,18 @@ where the sliders appear as `uon`, `aon` and `aoff`:
 
 **Variables:** `t` time · `d` current delay δ · `B` buffer budget · `hold` 0–1 · `speed` fastest hand in
 view (m/s) · `lspeed`, `rspeed` per hand · `depth` how deep a hand is in the water (m) · `inzone` · `on` · `ton` · `toff`
-· `tap` seconds since the last Tap (A) · `uon aon aoff` the three sliders · `k1 k2 k3` **self-defined variables** (0–10,
-for any extra number a formula needs). Switch them on under *Advanced → Self-defined variables* on the operator page,
-give each a name, and write it in a formula (e.g. u = `on ? uon * smoothstep(0, k1, ton) : 0`). While a formula uses
-one, the switch stays on; presets that use them name their own.
+· `tap` seconds since the last Tap (A) · `uon aon aoff` the three sliders · `k1 k2 k3` **self-defined variables**.
+Switch them on under *Advanced → Self-defined variables* on the operator page. Each is a formula of its own, a number
+(`k1 = 1.5`) or anything else (`k1 = 0.5 + 0.3 * sin(t)`), and when, u and α can use it (e.g. u =
+`on ? uon * smoothstep(0, k1, ton) : 0`). k2 can use k1, and k3 can use k1 and k2. Switching them off only hides them.
 
 **Language:** `+ − * / % ^`, comparisons, `&& || !`, `c ? a : b`, `pi`, and `sin cos tan abs sqrt exp log floor ceil
 round sign sat min max pow step clamp lerp smoothstep noise`. A value counts as true when it is above 0.5.
-Sliders that no formula reads are dimmed on the operator page (with a note saying so) and left out of the headset's menu.
+Sliders that no formula reads are dimmed on the operator page and left out of the headset's menu.
 
 **Drawn shapes** (under Advanced): **u(t)**, drawn over seconds since triggered, and **α(t)**, drawn over seconds since
-released. Drag points, double-click to add or remove; a "now" line shows where the effect is while it runs, and *Use this
-shape* switches the formula over to it. In formulas they are `c1(x)` and `c2(x)`, e.g. *Draw your own*:
+released. Drag points, double-click to add or remove; a "now" line shows where the effect is while it runs. *Use this
+shape* switches the formula over to it, and *Stop using* puts back the formula from before (or the default). In formulas they are `c1(x)` and `c2(x)`, e.g. *Draw your own*:
 u = `on ? c1(ton) : 0`, α = `on ? aon : c2(toff)`. Shapes are saved with presets.
 
 Presets come in two lists. The **main presets** are the most representative designs and only use the three sliders:

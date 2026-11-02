@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using UnityEngine;
 
 namespace RemappingTime
@@ -14,11 +15,12 @@ namespace RemappingTime
     /// <item><b>u</b>: the injection rate. 0 = real time, 0.8 = 5× slower, 1 = frozen, &gt;1 = rewind.</item>
     /// <item><b>α</b>: the recovery rate, how strongly the delay is pulled back to zero (catch-up ≈ 3/α seconds).</item>
     /// </list>
-    /// <para>Three knobs <c>k1 k2 k3</c> (0–10) can be used inside the formulas and tuned from the headset HUD or
-    /// the web page without retyping anything. See <see cref="VariableHelp"/> for every available variable.</para>
+    /// <para>Three self-defined variables <c>k1 k2 k3</c> are formulas of their own (a number such as <c>1.5</c>, or
+    /// anything like <c>0.5 + 0.3 * sin(t)</c>) that when, u and α can use. A variable can use the inputs and the
+    /// variables before it (k2 can use k1). See <see cref="VariableHelp"/> for every available variable.</para>
     ///
-    /// <para>Example, "hold to slow":<br/>
-    /// when = <c>hold</c>, u = <c>on ? k1 : 0</c>, α = <c>on ? 0.05 : k2</c> with k1 = 0.8, k2 = 5.</para>
+    /// <para>Example, "gradual brake":<br/>
+    /// when = <c>hold</c>, u = <c>on ? uon * smoothstep(0, k1, ton) : 0</c>, α = <c>on ? aon : aoff</c> with k1 = 1.5.</para>
     /// </summary>
     public sealed class FunctionPolicy : RemapPolicy
     {
@@ -51,7 +53,8 @@ namespace RemappingTime
             "seconds since 'when' became true (0 while off)",
             "seconds since 'when' became false (0 while on)",
             "seconds since the last Tap (A button / web)",
-            "self-defined variable 1 (0–10)", "self-defined variable 2 (0–10)", "self-defined variable 3 (0–10)",
+            "self-defined variable 1 (its own formula)", "self-defined variable 2 (its own formula; can use k1)",
+            "self-defined variable 3 (its own formula; can use k1, k2)",
             "u when triggered (slider)", "α when triggered (slider)", "α when released (slider)",
         };
 
@@ -59,8 +62,8 @@ namespace RemappingTime
                           Depth = 7, InZone = 8, On = 9, TOn = 10, TOff = 11, Tap = 12, K1 = 13, K2 = 14, K3 = 15,
                           UOn = 16, AOn = 17, AOff = 18;
 
-        /// <summary>Self-defined variables k1–k3: free numbers a preset names and uses inside its formulas.</summary>
-        public readonly Tunable Knob1, Knob2, Knob3;
+        /// <summary>The formula a self-defined variable starts with.</summary>
+        public const string DefaultVariable = "1";
 
         /// <summary>
         /// The three basic constants most designs need, shown as plain sliders: u while triggered, and α while
@@ -68,8 +71,8 @@ namespace RemappingTime
         /// </summary>
         public readonly Tunable UWhenOn, AlphaWhenOn, AlphaWhenOff;
 
-        /// <summary>UI group of the basic sliders, and of the self-defined variables.</summary>
-        public const string BasicGroup = "Time", VariablesGroup = "Self-defined";
+        /// <summary>UI group of the basic sliders.</summary>
+        public const string BasicGroup = "Time";
 
         /// <summary>
         /// Two drawable shapes, callable in formulas as <c>c1(x)</c> and <c>c2(x)</c>: by convention c1 shapes u
@@ -91,6 +94,9 @@ namespace RemappingTime
         public string AlphaSource { get; private set; }
 
         private Expression _when, _u, _alpha;
+        private readonly Expression[] _k = new Expression[3];
+        private readonly string[] _kSources = { DefaultVariable, DefaultVariable, DefaultVariable };
+        private readonly string[] _kNames = { "", "", "" };
         private readonly float[] _vars = new float[Variables.Length];
         private bool _on;
         private double _changedAt;
@@ -116,11 +122,8 @@ namespace RemappingTime
                 "How strongly time is pulled back toward real time while triggered. Small = the slowdown lasts.");
             AlphaWhenOff = Range("aoff", "α when released", 0f, 20f, 5f, 0.05f, "",
                 "How fast it catches up after release: catch-up takes about 3/α seconds (5 ≈ 0.6 s).");
-            Knob1 = Range("k1", "k1", 0f, 10f, 0.8f, 0.01f);
-            Knob2 = Range("k2", "k2", 0f, 10f, 5f, 0.01f);
-            Knob3 = Range("k3", "k3", 0f, 10f, 1f, 0.01f);
             foreach (Tunable t in new[] { UWhenOn, AlphaWhenOn, AlphaWhenOff }) t.Group = BasicGroup;
-            foreach (Tunable t in new[] { Knob1, Knob2, Knob3 }) t.Group = VariablesGroup;
+            for (int i = 0; i < 3; i++) Expression.TryCompile(DefaultVariable, Variables, out _k[i], out _);
             SetExpressions("hold", "on ? uon : 0", "on ? aon : aoff");
         }
 
@@ -128,10 +131,53 @@ namespace RemappingTime
         public bool UsesHold => Reads(Hold);
         public bool UsesTap => Reads(Tap);
         public bool UsesMotion => Reads(Speed) || Reads(LSpeed) || Reads(RSpeed);
-        public bool UsesCurve(string name) => (_when?.Calls(name) ?? false) || (_u?.Calls(name) ?? false) || (_alpha?.Calls(name) ?? false);
 
-        private bool Reads(int slot) => (_when?.Uses(slot) ?? false) || (_u?.Uses(slot) ?? false) || (_alpha?.Uses(slot) ?? false);
-        private bool WhenReads(int slot) => _when?.Uses(slot) ?? false;
+        public bool UsesCurve(string name)
+        {
+            if (CallsDeep(_when, name) || CallsDeep(_u, name) || CallsDeep(_alpha, name)) return true;
+            return false;
+        }
+
+        /// <summary>True while when, u or α use self-defined variable k<paramref name="index"/> (1–3), directly or through another one.</summary>
+        public bool UsesVariable(int index) => index >= 1 && index <= 3 && Reads(K1 + index - 1);
+
+        /// <summary>The formula of self-defined variable k<paramref name="index"/> (1–3).</summary>
+        public string VariableSource(int index) => index >= 1 && index <= 3 ? _kSources[index - 1] : "";
+
+        /// <summary>The name a preset gives self-defined variable k<paramref name="index"/> (1–3), or "".</summary>
+        public string VariableName(int index) => index >= 1 && index <= 3 ? _kNames[index - 1] : "";
+
+        /// <summary>Names a self-defined variable (shown as "k1 (name)"); "" removes the name.</summary>
+        public void SetVariableName(int index, string name)
+        {
+            if (index < 1 || index > 3) return;
+            name = System.Text.RegularExpressions.Regex.Replace(name ?? "", @"[<>\p{Cc}]", "");
+            name = System.Text.RegularExpressions.Regex.Replace(name, @"\s+", " ").Trim();
+            _kNames[index - 1] = name.Length > 40 ? name.Substring(0, 40).Trim() : name;
+            ExpressionsChanged?.Invoke();
+        }
+
+        /// <summary>Reads <paramref name="slot"/> in when, u or α, also through the self-defined variables they use.</summary>
+        private bool Reads(int slot) => UsesDeep(_when, slot) || UsesDeep(_u, slot) || UsesDeep(_alpha, slot);
+        private bool WhenReads(int slot) => UsesDeep(_when, slot);
+
+        private bool UsesDeep(Expression e, int slot)
+        {
+            if (e == null) return false;
+            if (e.Uses(slot)) return true;
+            for (int i = 0; i < 3; i++)
+                if (_k[i] != null && e.Uses(K1 + i) && UsesDeep(_k[i], slot)) return true;
+            return false;
+        }
+
+        private bool CallsDeep(Expression e, string fn)
+        {
+            if (e == null) return false;
+            if (e.Calls(fn)) return true;
+            for (int i = 0; i < 3; i++)
+                if (_k[i] != null && e.Uses(K1 + i) && CallsDeep(_k[i], fn)) return true;
+            return false;
+        }
 
         /// <summary>
         /// What starts the remapping, in plain words, derived from the 'when' formula (shown on the HUD and the
@@ -150,7 +196,10 @@ namespace RemappingTime
                 if (_when == null) return "never";
                 // No user input: a constant ("1" / "0") or a function of time.
                 bool timed = WhenReads(T) || WhenReads(D) || WhenReads(On) || WhenReads(TOn) || WhenReads(TOff);
-                return timed ? "automatic" : _when.Evaluate(new float[Variables.Length]) > 0.5f ? "always on" : "never (live)";
+                if (timed) return "automatic";
+                var probe = new float[Variables.Length];
+                EvaluateVariables(probe);
+                return _when.Evaluate(probe) > 0.5f ? "always on" : "never (live)";
             }
         }
 
@@ -162,8 +211,8 @@ namespace RemappingTime
         }
 
         /// <summary>
-        /// Compiles and installs one expression ("when", "u" or "alpha"). On error the previous expression stays
-        /// active and <paramref name="error"/> explains the problem.
+        /// Compiles and installs one expression ("when", "u", "alpha", or a self-defined variable "k1", "k2", "k3").
+        /// On error the previous expression stays active and <paramref name="error"/> explains the problem.
         /// </summary>
         public bool SetExpression(string which, string source, out string error)
         {
@@ -174,12 +223,22 @@ namespace RemappingTime
                 case "when": _when = expr; WhenSource = source; break;
                 case "u": _u = expr; USource = source; break;
                 case "alpha": case "α": _alpha = expr; AlphaSource = source; break;
+                case "k1": case "k2": case "k3":
+                {
+                    int i = which[1] - '1';
+                    // A variable can use the ones before it, never itself or later ones (no loops).
+                    for (int j = i; j < 3; j++)
+                        if (expr.Uses(K1 + j))
+                        {
+                            error = i == 0 ? "k1 can't use k1, k2 or k3" : $"k{i + 1} can only use {(i == 1 ? "k1" : "k1 and k2")}";
+                            return false;
+                        }
+                    _k[i] = expr; _kSources[i] = source;
+                    break;
+                }
                 default: error = $"unknown formula '{which}'"; return false;
             }
             // Mark the sliders no formula reads (the web page dims them, the headset menu leaves them out).
-            Knob1.Unused = !Reads(K1);
-            Knob2.Unused = !Reads(K2);
-            Knob3.Unused = !Reads(K3);
             UWhenOn.Unused = !Reads(UOn);
             AlphaWhenOn.Unused = !Reads(AOn);
             AlphaWhenOff.Unused = !Reads(AOff);
@@ -187,27 +246,11 @@ namespace RemappingTime
             return true;
         }
 
-        private readonly string[] _knobNames = { "", "", "" };
-
-        /// <summary>The name given to self-defined variable k<paramref name="knob"/> (1–3), or "" if unnamed.</summary>
-        public string KnobName(int knob) => knob >= 1 && knob <= 3 ? _knobNames[knob - 1] : "";
-
-        /// <summary>
-        /// Names self-defined variable k<paramref name="knob"/> (1–3); an empty name removes it. The slider then reads
-        /// "k1 (name)". A "k1" typed in front of the name and surrounding parentheses are dropped.
-        /// </summary>
-        public void SetKnobName(int knob, string name)
+        /// <summary>Sets self-defined variable k<paramref name="index"/> (1–3) to a plain number.</summary>
+        public void SetVariableValue(int index, float value)
         {
-            if (knob < 1 || knob > 3) return;
-            name = (name ?? "").Trim();
-            name = System.Text.RegularExpressions.Regex.Replace(name, $@"^k{knob}\b[\s:=\-]*", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            name = System.Text.RegularExpressions.Regex.Replace(name, @"[<>\p{Cc}]", "");
-            name = System.Text.RegularExpressions.Regex.Replace(name, @"\s+", " ").Trim();
-            if (name.StartsWith("(") && name.EndsWith(")")) name = name.Substring(1, name.Length - 2).Trim();
-            if (name.Length > 40) name = name.Substring(0, 40).Trim();
-            _knobNames[knob - 1] = name;
-            Tunable k = knob == 1 ? Knob1 : knob == 2 ? Knob2 : Knob3;
-            k.Label = name.Length == 0 ? $"k{knob}" : $"k{knob} ({name})";
+            if (index < 1 || index > 3 || float.IsNaN(value) || float.IsInfinity(value)) return;
+            SetExpression("k" + index, value.ToString("0.###", CultureInfo.InvariantCulture), out _);
         }
 
         /// <summary>Default shapes: c1 eases into 0.9 and back out; c2 starts gentle and strengthens.</summary>
@@ -226,6 +269,11 @@ namespace RemappingTime
             _lastTap = double.NegativeInfinity;
         }
 
+        private void EvaluateVariables(float[] vars)
+        {
+            for (int i = 0; i < 3; i++) vars[K1 + i] = _k[i] != null ? _k[i].Evaluate(vars) : 0f;
+        }
+
         public override RemapCommand Evaluate(in RemapContext ctx)
         {
             if (!_hasTime) { _changedAt = ctx.Time - 1000.0; _hasTime = true; }
@@ -241,9 +289,6 @@ namespace RemappingTime
             _vars[Depth] = ctx.InZone ? ctx.ZoneDepth : 0f;
             _vars[InZone] = ctx.InZone ? 1f : 0f;
             _vars[Tap] = (float)Math.Min(1000.0, ctx.Time - _lastTap);
-            _vars[K1] = Knob1.Value;
-            _vars[K2] = Knob2.Value;
-            _vars[K3] = Knob3.Value;
             _vars[UOn] = UWhenOn.Value;
             _vars[AOn] = AlphaWhenOn.Value;
             _vars[AOff] = AlphaWhenOff.Value;
@@ -253,12 +298,14 @@ namespace RemappingTime
             _vars[On] = _on ? 1f : 0f;
             _vars[TOn] = _on ? elapsed : 0f;
             _vars[TOff] = _on ? 0f : elapsed;
+            EvaluateVariables(_vars);
 
             bool on = _when != null && _when.Evaluate(_vars) > 0.5f;
             if (on != _on) { _on = on; _changedAt = ctx.Time; elapsed = 0f; }
             _vars[On] = _on ? 1f : 0f;
             _vars[TOn] = _on ? elapsed : 0f;
             _vars[TOff] = _on ? 0f : elapsed;
+            EvaluateVariables(_vars); // again, so u and α see variables that depend on the new on/ton/toff
 
             float u = _u != null ? _u.Evaluate(_vars) : 0f;
             float alpha = _alpha != null ? _alpha.Evaluate(_vars) : 5f;

@@ -48,6 +48,9 @@ namespace RemappingTime.Remote
         // What the formulas read, so pages can show the right controls (e.g. a hold button only if 'hold' is used).
         public bool usesHold, usesTrigger, usesWater, usesMotion;
         public CurveInfo[] curves;
+        // Self-defined variables k1..k3: formulas, the names a preset gives them, and whether when/u/α use them.
+        public string[] vars, varNames;
+        public bool[] varsUsed;
     }
 
     /// <summary>One hand (or held controller) as seen by the motion tracking.</summary>
@@ -68,8 +71,6 @@ namespace RemappingTime.Remote
         public string[] options;
         /// <summary>No formula reads it right now (shown dimmed).</summary>
         public bool unused;
-        /// <summary>Self-defined variables only: the name given to it ("" if none).</summary>
-        public string varName = "";
     }
 
     /// <summary>Sent on connect and whenever the set of policies, tunables or presets changes.</summary>

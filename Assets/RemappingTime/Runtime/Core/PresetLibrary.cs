@@ -22,8 +22,8 @@ namespace RemappingTime
     }
 
     /// <summary>
-    /// A named configuration: the time function (formulas for when / u / α, with names for its knobs) plus
-    /// values for any tunables (knobs, view, tracking, …). Values that are not listed are reset to their
+    /// A named configuration: the time function (formulas for when / u / α and the self-defined variables k1–k3)
+    /// plus values for any tunables (sliders, view, tracking, …). Values that are not listed are reset to their
     /// defaults when the preset is applied, so a preset always produces the same experience regardless of what
     /// was tuned before.
     /// </summary>
@@ -35,8 +35,10 @@ namespace RemappingTime
         /// <summary>One line shown in the UIs: what this preset does.</summary>
         public string description = "";
         public string when, u, alpha;
-        /// <summary>Display names for knobs k1, k2, k3 (empty = unused).</summary>
+        /// <summary>Names for the self-defined variables k1, k2, k3 (empty = no name).</summary>
         public string[] knobs = Array.Empty<string>();
+        /// <summary>Formulas for k1, k2, k3 (empty = the default). Older presets stored plain numbers as fn.k1… values.</summary>
+        public string[] vars = Array.Empty<string>();
         public ParamValue[] values = Array.Empty<ParamValue>();
         /// <summary>Listed under "Advanced presets" in the UIs (the main list keeps the most representative ones).</summary>
         public bool advanced;
@@ -52,20 +54,20 @@ namespace RemappingTime
         /// <summary>"main", "advanced" or "saved" (user presets), for grouping in the UIs.</summary>
         public string Category => !builtIn ? "saved" : advanced ? "advanced" : "main";
 
-        /// <summary>A built-in time-function preset. <paramref name="knobs"/> are (label, value) for k1..k3.</summary>
+        /// <summary>A built-in time-function preset. <paramref name="knobs"/> are (name, value) for k1..k3.</summary>
         public static RemapPreset Fn(string name, string description, string when, string u, string alpha,
                                      (string label, float value)[] knobs, params (string id, float v)[] values)
         {
             var p = new RemapPreset
             {
                 name = name, description = description, when = when, u = u, alpha = alpha, builtIn = true,
-                knobs = new string[knobs.Length],
+                knobs = new string[knobs.Length], vars = new string[knobs.Length],
             };
             var list = new List<ParamValue>();
             for (int k = 0; k < knobs.Length; k++)
             {
                 p.knobs[k] = knobs[k].label;
-                list.Add(new ParamValue($"fn.k{k + 1}", knobs[k].value));
+                p.vars[k] = knobs[k].value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
             }
             foreach ((string id, float v) in values) list.Add(new ParamValue(id, v));
             p.values = list.ToArray();
@@ -179,8 +181,18 @@ namespace RemappingTime
             fn.ResetCurves();
             if (preset.curves != null)
                 foreach (CurveData c in preset.curves) fn.FindCurve(c.name)?.SetPoints(c.xs, c.ys);
-            for (int k = 0; k < 3; k++)
-                fn.SetKnobName(k + 1, preset.knobs != null && k < preset.knobs.Length ? preset.knobs[k] : "");
+            for (int k = 1; k <= 3; k++)
+            {
+                fn.SetVariableName(k, preset.knobs != null && k <= preset.knobs.Length ? preset.knobs[k - 1] : "");
+                string formula = preset.vars != null && k <= preset.vars.Length ? preset.vars[k - 1] : null;
+                ParamValue legacy = Array.Find(preset.values ?? Array.Empty<ParamValue>(), v => v != null && v.id == $"fn.k{k}");
+                if (!string.IsNullOrWhiteSpace(formula))
+                {
+                    if (!fn.SetExpression("k" + k, formula, out _)) { fn.SetExpression("k" + k, FunctionPolicy.DefaultVariable, out _); ok = false; }
+                }
+                else if (legacy != null) fn.SetVariableValue(k, legacy.v);
+                else fn.SetExpression("k" + k, FunctionPolicy.DefaultVariable, out _);
+            }
             return ok;
         }
 

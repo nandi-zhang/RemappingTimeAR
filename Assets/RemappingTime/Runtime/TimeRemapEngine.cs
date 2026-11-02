@@ -222,7 +222,8 @@ namespace RemappingTime
                 preset.when = fn.WhenSource;
                 preset.u = fn.USource;
                 preset.alpha = fn.AlphaSource;
-                preset.knobs = new[] { fn.KnobName(1), fn.KnobName(2), fn.KnobName(3) };
+                preset.knobs = new[] { fn.VariableName(1), fn.VariableName(2), fn.VariableName(3) };
+                preset.vars = new[] { fn.VariableSource(1), fn.VariableSource(2), fn.VariableSource(3) };
                 preset.curves = fn.Curves.Select(c => new CurveData { name = c.Name, xs = c.Xs, ys = c.Ys }).ToArray();
             }
             return Presets.Save(preset);
@@ -252,7 +253,7 @@ namespace RemappingTime
         public void SetKnobLabel(int knob, string label)
         {
             if (Function == null || knob < 1 || knob > 3) return;
-            Function.SetKnobName(knob, label);
+            Function.SetVariableName(knob, label);
             SchemaChanged?.Invoke();
         }
 
