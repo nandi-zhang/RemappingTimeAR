@@ -195,7 +195,9 @@ code (Python, TouchDesigner, a game server, …).
 On the operator page, **Time remapping** shows three sliders that cover most designs: **u when triggered**,
 **α when triggered** and **α when released**. What "triggered" means (holding the trigger, moving fast, touching the
 water, …) comes from the preset. Behind them, everything is described by three formulas, editable under **Advanced**,
-where the sliders appear as `uon`, `aon` and `aoff`:
+where the sliders appear as `uon`, `aon` and `aoff`. Edit a formula and click its ✓ (or press Enter) to use it; a lit ✓
+means your formula is in use and the slider it replaces is dimmed. Click a lit ✓ to go back to the slider. Changes made
+while the headset is asleep are kept on the page and sent when it reconnects.
 
 | Formula | Meaning | Example |
 |---|---|---|
@@ -215,8 +217,8 @@ round sign sat min max pow step clamp lerp smoothstep noise`. A value counts as 
 Sliders that no formula reads are dimmed on the operator page and left out of the headset's menu.
 
 **Drawn shapes** (under Advanced): **u(t)**, drawn over seconds since triggered, and **α(t)**, drawn over seconds since
-released. Drag points, double-click to add or remove; a "now" line shows where the effect is while it runs. *Use this
-shape* switches the formula over to it, and *Stop using* puts back the formula from before (or the default). In formulas they are `c1(x)` and `c2(x)`, e.g. *Draw your own*:
+released. Drag points, double-click to add or remove; a "now" line shows where the effect is while it runs. Its ✓
+switches the formula over to the shape, and clicking it again puts back the formula from before (or the default). In formulas they are `c1(x)` and `c2(x)`, e.g. *Draw your own*:
 u = `on ? c1(ton) : 0`, α = `on ? aon : c2(toff)`. Shapes are saved with presets.
 
 Presets come in two lists. The **main presets** are the most representative designs and only use the three sliders:

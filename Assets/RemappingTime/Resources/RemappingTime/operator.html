@@ -25,6 +25,11 @@
   button.btn.small { padding: 3px 10px; font-size: 12px; color: var(--muted); }
   main { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(360px, 1.15fr); gap: 16px; padding: 16px; max-width: 1500px; margin: 0 auto; }
   @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 12px; } }
+  /* No headset connection (app not running, headset asleep): edits are kept and sent on reconnect, but live views,
+     presets and actions need the headset. */
+  main.offline .live, main.offline #presetCard, main.offline #actionsCard { opacity: .45; pointer-events: none; }
+  .ov { position: relative; display: inline-block; }
+  .ov::after { content: "˙"; position: absolute; left: 0; right: 0; text-align: center; top: -.42em; font-style: normal; }
   .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
   .live { position: sticky; top: 66px; align-self: start; }
   @media (max-width: 900px) { .live { position: static; order: -1; } }
@@ -36,7 +41,16 @@
   .policy:hover { border-color: #33405a; }
   .policy.active { border-color: var(--cool); box-shadow: inset 0 0 0 1px var(--cool); }
   .policy b { display: block; font-size: 14px; }
-  .fx { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 8px; margin-top: 8px; }
+  .fx { display: grid; grid-template-columns: 56px 1fr auto 30px; align-items: center; gap: 8px; margin-top: 8px; }
+  /* ✓ beside a formula or shape: dim = not in use, lit = in use, orange = edited, click to apply. */
+  button.ck { width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 1px solid var(--line); background: var(--panel2);
+    color: #4a5466; font: 700 14px/1 system-ui, sans-serif; cursor: pointer; }
+  button.ck:hover { border-color: #3a4862; color: var(--muted); }
+  button.ck.on { background: #15405a; border-color: var(--cool); color: var(--cool); }
+  button.ck.pending { border-color: var(--warm); color: var(--warm); background: #2a2114; }
+  .eq { font: italic 600 17px/1.2 "Cambria Math", "STIX Two Math", Georgia, serif; margin: 2px 0 8px; letter-spacing: .02em; }
+  .eqkey { display: grid; grid-template-columns: 22px 1fr; gap: 2px 8px; color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+  .eqkey i { color: var(--text); font: italic 600 14px Georgia, serif; text-align: center; }
   .fx label { color: var(--muted); font-weight: 600; text-align: right; font-family: ui-monospace, Consolas, monospace; }
   input.code[type=text] { font-family: ui-monospace, Consolas, monospace; font-size: 14px; padding: 9px 10px; width: 100%; }
   input.code.dirty { border-color: var(--warm); }
@@ -53,7 +67,6 @@
   .curve canvas { width: 100%; height: 150px; display: block; background: var(--panel2); border-radius: 8px;
     margin-top: 4px; cursor: crosshair; touch-action: none; }
   .curve.unused canvas { opacity: 0.55; }
-  .curve .use button { padding: 3px 10px; font-size: 12px; }
   .advanced { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
   .advanced > summary { cursor: pointer; color: var(--cool); font-weight: 600; }
   .card h3 { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; font-weight: 600; }
@@ -122,7 +135,7 @@
 <body>
 <header>
   <h1>Remapping Time</h1>
-  <span class="chip"><span class="dot" id="dot"></span><span id="conn">connecting…</span></span>
+  <span class="chip"><span class="dot" id="dot"></span><span id="conn">connecting to the headset…</span></span>
   <span class="chip">cam <b id="fps">–</b> Hz</span>
   <span class="chip">battery <b id="battery">–</b></span>
   <span class="chip">web clients <b id="clients">0</b></span>
@@ -132,7 +145,7 @@
   <form class="pin rowf" id="pinForm"><input type="password" id="pin" placeholder="operator PIN" size="10"><button class="btn primary">Unlock</button></form>
 </header>
 
-<main>
+<main class="offline">
   <section class="col">
     <div class="card" id="policyCard" style="display:none">
       <h2>Policy</h2>
@@ -140,7 +153,7 @@
       <div class="desc" id="policyDesc"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="presetCard">
       <h2>Presets</h2>
       <div class="rowf">
         <select id="presetSelect"></select>
@@ -156,19 +169,25 @@
 
     <div class="card" id="fnCard">
       <h2>Time remapping<span class="tip" tabindex="0" data-tip="u adds delay: 0 = real time, 1 = freeze, above 1 = rewind.&#10;α pulls it back to the present: catching up takes about 3/α seconds.">?</span></h2>
+      <div class="eq"><span class="ov">δ</span> = u − α δ</div>
+      <div class="eqkey">
+        <i>δ</i><span>gap between the displayed time and the present</span>
+        <i>u</i><span>remap force</span>
+        <i>α</i><span>resume force</span>
+      </div>
       <div class="desc" style="margin-top:0">Start: <b id="trigHint">–</b></div>
       <div class="group" id="basicParams" style="margin-top:10px"></div>
 
       <details class="advanced" id="advanced">
         <summary>Advanced</summary>
 
-        <h3>Formulas<span class="tip" tabindex="0" data-tip="The sliders above are uon, aon and aoff.&#10;c ? a : b gives a when c is true.&#10;Press Enter to apply a formula, Esc to undo your edit.">?</span></h3>
+        <h3>Formulas<span class="tip" tabindex="0" data-tip="The sliders above are uon, aon and aoff.&#10;c ? a : b gives a when c is true.&#10;Edit a formula, then click ✓ (or press Enter) to use it.&#10;A lit ✓ means in use: click it to go back to the slider.">?</span></h3>
 
-        <div class="fx"><label for="fxWhen" title="Trigger condition. While true: on = 1, ton counts up.">when</label><input type="text" id="fxWhen" class="code" spellcheck="false" autocomplete="off"></div>
+        <div class="fx"><label for="fxWhen" title="Trigger condition. While true: on = 1, ton counts up.">when</label><input type="text" id="fxWhen" class="code" spellcheck="false" autocomplete="off"><span></span><button class="ck" data-id="when">✓</button></div>
         <div class="fxerr" id="errWhen"></div>
-        <div class="fx"><label for="fxU" title="Injection: 0 = real time, 0.8 = 5× slower, 1 = freeze, >1 = rewind">u =</label><input type="text" id="fxU" class="code" spellcheck="false" autocomplete="off"></div>
+        <div class="fx"><label for="fxU" title="Injection: 0 = real time, 0.8 = 5× slower, 1 = freeze, >1 = rewind">u =</label><input type="text" id="fxU" class="code" spellcheck="false" autocomplete="off"><span></span><button class="ck" data-id="u">✓</button></div>
         <div class="fxerr" id="errU"></div>
-        <div class="fx"><label for="fxAlpha" title="Recovery: how strongly the delay is pulled back (catch-up ≈ 3/α seconds)">α =</label><input type="text" id="fxAlpha" class="code" spellcheck="false" autocomplete="off"></div>
+        <div class="fx"><label for="fxAlpha" title="Recovery: how strongly the delay is pulled back (catch-up ≈ 3/α seconds)">α =</label><input type="text" id="fxAlpha" class="code" spellcheck="false" autocomplete="off"><span></span><button class="ck" data-id="alpha">✓</button></div>
         <div class="fxerr" id="errAlpha"></div>
 
         <div class="varhead">
@@ -176,15 +195,15 @@
           <label class="switch" title="Show k1, k2 and k3"><input type="checkbox" id="varsOn"><span></span></label>
         </div>
         <div id="varFields">
-          <div class="fx"><label for="fxK1">k1 =</label><input type="text" id="fxK1" class="code" spellcheck="false" autocomplete="off"><span class="fxname" id="nameK1"></span></div>
+          <div class="fx"><label for="fxK1">k1 =</label><input type="text" id="fxK1" class="code" spellcheck="false" autocomplete="off"><span class="fxname" id="nameK1"></span><button class="ck" data-id="k1">✓</button></div>
           <div class="fxerr" id="errK1"></div>
-          <div class="fx"><label for="fxK2" title="Can use k1">k2 =</label><input type="text" id="fxK2" class="code" spellcheck="false" autocomplete="off"><span class="fxname" id="nameK2"></span></div>
+          <div class="fx"><label for="fxK2" title="Can use k1">k2 =</label><input type="text" id="fxK2" class="code" spellcheck="false" autocomplete="off"><span class="fxname" id="nameK2"></span><button class="ck" data-id="k2">✓</button></div>
           <div class="fxerr" id="errK2"></div>
-          <div class="fx"><label for="fxK3" title="Can use k1 and k2">k3 =</label><input type="text" id="fxK3" class="code" spellcheck="false" autocomplete="off"><span class="fxname" id="nameK3"></span></div>
+          <div class="fx"><label for="fxK3" title="Can use k1 and k2">k3 =</label><input type="text" id="fxK3" class="code" spellcheck="false" autocomplete="off"><span class="fxname" id="nameK3"></span><button class="ck" data-id="k3">✓</button></div>
           <div class="fxerr" id="errK3"></div>
         </div>
 
-        <h3>Drawn shapes<span class="tip" tabindex="0" data-tip="Drag points; double-click to add or remove one.&#10;In formulas: c1(x) and c2(x).">?</span></h3>
+        <h3>Drawn shapes<span class="tip" tabindex="0" data-tip="Drag points; double-click to add or remove one.&#10;✓ uses a shape. In formulas: c1(x) and c2(x).">?</span></h3>
         <div id="curves"></div>
 
         <details class="vars"><summary>Variables and functions you can use</summary>
@@ -194,7 +213,7 @@
       </details>
     </div>
 
-    <div class="card">
+    <div class="card" id="actionsCard">
       <h2>Actions<span class="tip" tabindex="0" data-tip="Keys: Space = hold, P = tap, L = back to present.">?</span></h2>
       <div class="rowf">
         <button class="btn" data-action="live" title="Catch up to the present now (L)">Back to present</button>
@@ -264,7 +283,13 @@
   // ── Connection ──────────────────────────────────────────────────────────
   function connect() {
     ws = new WebSocket(`ws://${location.host}/ws`);
-    ws.onopen = () => { setConn(true); hello(); log('Connected to the headset.'); };
+    ws.onopen = () => {
+      setConn(true); hello(); log('Connected to the headset.');
+      // Changes made while disconnected go out right after the hello, in the order they were made.
+      for (const o of queued.values()) ws.send(JSON.stringify(o));
+      if (queued.size) log(`Sent ${queued.size} change${queued.size > 1 ? 's' : ''} made while disconnected.`);
+      queued.clear();
+    };
     ws.onclose = () => { holding = false; $('hold').classList.remove('active'); if (wasConnected) log('Lost connection, retrying…', 'error'); setConn(false); setTimeout(connect, 1000); };
     ws.onerror = () => ws.close();
     ws.onmessage = e => {
@@ -274,10 +299,38 @@
       else if (m.type === 'notice') { log(m.text, m.level); formulaNotice(m); }
     };
   }
-  const send = o => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
+  // While the headset is not connected (app not running, headset asleep), formula, shape and slider changes are
+  // kept (the latest per item), shown on the page right away, and sent when it reconnects. Momentary actions are not.
+  const queued = new Map();
+  const QUEUE_KEY = { expr: o => 'expr:' + o.id, curve: o => 'curve:' + o.id, set: o => 'set:' + o.id, knobLabel: o => 'name:' + o.id };
+  const send = o => {
+    if (ws && ws.readyState === 1) { ws.send(JSON.stringify(o)); return; }
+    if (!QUEUE_KEY[o.type]) return;
+    const key = QUEUE_KEY[o.type](o);
+    queued.delete(key); queued.set(key, o);
+    applyLocally(o);
+  };
+  // Mirrors what the headset would do with a queued change, so the page shows it while offline.
+  function applyLocally(o) {
+    const fn = schema && schema.function; if (!schema) return;
+    if (o.type === 'set') { const t = schema.tunables.find(x => x.id === o.id); if (t) t.value = o.value; return; }
+    if (o.type === 'curve' && fn) { const c = (fn.curves || []).find(x => x.name === o.id); if (c) { c.xs = o.xs.slice(); c.ys = o.ys.slice(); } return; }
+    if (o.type !== 'expr' || !fn) return;
+    if (/^k[123]$/.test(o.id)) fn.vars[+o.id[1] - 1] = o.name; else fn[o.id === 'α' ? 'alpha' : o.id] = o.name;
+    const main = [fn.when, fn.u, fn.alpha].join(' '), all = main + ' ' + (fn.vars || []).join(' ');
+    const reads = (text, v) => new RegExp('\\b' + v + '\\b').test(text);
+    for (const c of fn.curves || []) c.used = new RegExp('\\b' + c.name + '\\s*\\(').test(all);
+    fn.varsUsed = [1, 2, 3].map(k => reads(main, 'k' + k));
+    for (const t of schema.tunables) if (/^fn\.(uon|aon|aoff)$/.test(t.id)) t.unused = !reads(all, t.id.slice(3));
+    onSchema(schema);
+  }
   const hello = () => send({ type: 'hello', role: 'operator', pin: store.get('rt.pin') || '' });
   let wasConnected = false;
-  function setConn(on) { wasConnected = on; $('dot').classList.toggle('on', on); $('conn').textContent = on ? 'connected' : 'reconnecting…'; }
+  function setConn(on) {
+    wasConnected = on; $('dot').classList.toggle('on', on);
+    $('conn').textContent = on ? 'connected' : 'headset not connected: your changes are sent when it reconnects';
+    document.querySelector('main').classList.toggle('offline', !on);
+  }
 
   // Messages: connection changes, policy/preset switches (from any source, including the headset menu),
   // and notices from the headset such as "Saved preset" or errors. Kept to the last 50 lines.
@@ -393,22 +446,19 @@
       const lbl = c.wrap.querySelector('.lbl'), oldTip = lbl.querySelector('.tip'); if (oldTip) oldTip.remove();
       lbl.appendChild(tip(`${meta.axis[0].toUpperCase()}${meta.axis.slice(1)}.\n${info.name}(x) in formulas.`));
       const use = c.wrap.querySelector('.use'); use.innerHTML = '';
-      const b = document.createElement('button'); b.className = 'btn'; b.disabled = !isOp;
+      const b = document.createElement('button'); b.className = 'ck' + (info.used ? ' on' : ''); b.textContent = '✓'; b.disabled = !isOp;
       if (info.used) {
-        b.textContent = 'Stop using';
-        b.title = `Removes ${info.name}() from the formulas (back to what they were before, or the default)`;
+        b.title = 'In use. Click to stop using this shape.';
         b.onclick = () => stopUsingShape(info.name);
-        use.appendChild(b);
       } else if (meta.use) {
-        b.textContent = 'Use this shape';
-        b.title = `Sets ${meta.use.id === 'u' ? 'u' : 'α'} = ${meta.use.name}`;
+        b.title = `Use this shape (${meta.use.id === 'u' ? 'u' : 'α'} = ${meta.use.name})`;
         b.onclick = () => {
           const fn = schema && schema.function;
           if (fn) beforeShape[meta.use.id] = meta.use.id === 'u' ? fn.u : fn.alpha;
           send({ type: 'expr', id: meta.use.id, name: meta.use.name });
         };
-        use.appendChild(b);
       }
+      use.appendChild(b);
       c.wrap.classList.toggle('unused', !info.used);
       if (c.drag < 0) { c.xs = info.xs.slice(); c.ys = info.ys.slice(); }   // never overwrite a curve being dragged
     }
@@ -521,20 +571,48 @@
   const formulaFields = { fxWhen: 'when', fxU: 'u', fxAlpha: 'alpha', fxK1: 'k1', fxK2: 'k2', fxK3: 'k3' };
   const errorBox = { when: 'errWhen', u: 'errU', alpha: 'errAlpha', 'α': 'errAlpha', k1: 'errK1', k2: 'errK2', k3: 'errK3' };
 
-  // Fill from the headset, but never overwrite what you are typing.
+  // Fill from the headset, but never overwrite what you are still typing (once the headset reports the text you
+  // typed, the edit is applied and the field is clean again).
   function setFormula(id, text) {
-    const el = $(id);
-    if (document.activeElement === el && el.classList.contains('dirty')) return;
-    el.value = text || '';
-    el.dataset.applied = el.value;
-    el.classList.remove('dirty');
+    const el = $(id); text = text || '';
+    if (!(document.activeElement === el && el.classList.contains('dirty') && el.value !== text)) {
+      el.value = text;
+      el.classList.remove('dirty');
+    }
+    el.dataset.applied = text;
+    updateCheck(formulaFields[id]);
   }
+
+  // The ✓ beside each formula: orange = edited (click to apply), lit = a formula of your own is in use (click to go
+  // back to the slider / default), dim = the default is in use (click to bring your last formula back).
+  const lastCustom = {};
+  const fieldFor = id => Object.keys(formulaFields).find(f => formulaFields[f] === id);
+  function checkState(id) {
+    const el = $(fieldFor(id));
+    if (el.classList.contains('dirty')) return 'pending';
+    return (el.dataset.applied || '').trim() !== DEFAULT_FORMULA[id] ? 'on' : 'off';
+  }
+  function updateCheck(id) {
+    const b = document.querySelector(`.ck[data-id="${id}"]`); if (!b) return;
+    const st = checkState(id), slider = id === 'u' || id === 'alpha';
+    b.classList.toggle('on', st === 'on'); b.classList.toggle('pending', st === 'pending');
+    b.title = st === 'pending' ? 'Use this formula (Enter)'
+      : st === 'on' ? (slider ? 'In use. Click to go back to the slider.' : 'In use. Click to go back to the default.')
+      : lastCustom[id] ? 'Click to use your formula again.' : 'Edit the formula, then click to use it.';
+  }
+  document.querySelectorAll('.fx .ck').forEach(b => b.onclick = () => {
+    const id = b.dataset.id, el = $(fieldFor(id)), st = checkState(id);
+    if (st === 'pending') send({ type: 'expr', id, name: el.value });
+    else if (st === 'on') { lastCustom[id] = el.dataset.applied; send({ type: 'expr', id, name: DEFAULT_FORMULA[id] }); }
+    else if (lastCustom[id]) send({ type: 'expr', id, name: lastCustom[id] });
+    else el.focus();
+  });
   for (const [id, which] of Object.entries(formulaFields)) {
     const el = $(id);
-    el.addEventListener('input', () => el.classList.toggle('dirty', el.value !== el.dataset.applied));
+    el.addEventListener('input', () => { el.classList.toggle('dirty', el.value !== el.dataset.applied); updateCheck(which); });
     el.addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); send({ type: 'expr', id: which, name: el.value }); }
-      if (e.key === 'Escape') { el.value = el.dataset.applied || ''; el.classList.remove('dirty'); }
+      if (e.key === 'Escape') { el.value = el.dataset.applied || ''; el.classList.remove('dirty'); updateCheck(which); }
     });
   }
   // The headset answers each formula with "u = …" (applied) or "u: error message".
