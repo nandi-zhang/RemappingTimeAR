@@ -330,6 +330,14 @@ namespace RemappingTime
 
             yield return RemapPreset.Fn("Drifting time", "Smoothly random slowdowns: time wanders.",
                 "1", "uon * noise(k1 * t)", "aon", new[] { ("wander speed", 0.4f) }, U(0.8f), AOn(1f)).AsAdvanced();
+
+            // Discontinuous counterexamples. δ settles at u/α, and a huge α gets it there within one frame, so
+            // u = 1000·D, α = 1000 cuts the view straight to D seconds ago: a jump, with no slowdown or rewind between.
+            yield return RemapPreset.Fn("Cut back", "Hold to cut k1 seconds into the past, release to cut back to the present: the view jumps instead of flowing.",
+                "hold", "on ? 1000 * k1 : 0", "1000", new[] { ("cut back seconds", 1.5f) }).AsAdvanced();
+
+            yield return RemapPreset.Fn("Jump cuts", "Every k1 seconds the view cuts to a random moment up to k2 seconds ago, like a film edit of your surroundings.",
+                "1", "1000 * k2 * noise(floor(t / k1))", "1000", new[] { ("shot length seconds", 1.2f), ("longest cut back seconds", 1.5f) }).AsAdvanced();
         }
     }
 }

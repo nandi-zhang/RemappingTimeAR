@@ -70,9 +70,10 @@ namespace RemappingTime
                 if (_snapping && Dynamics.Delay < 0.005) _snapping = false;
             }
 
-            // u up to 5 allows rewind at up to 4×; α up to 100 is an effectively instant catch-up.
-            float u = Mathf.Clamp(float.IsNaN(cmd.U) ? 0f : cmd.U, 0f, 5f);
-            float a = Mathf.Clamp(float.IsNaN(cmd.Alpha) ? 0f : cmd.Alpha, 0f, 100f);
+            // δ settles at u/α at a speed set by α, so very large values jump it within a frame: u = 1000·D, α = 1000
+            // cuts straight to D seconds ago (see the "Cut back" and "Jump cuts" presets). The limits leave room for that.
+            float u = Mathf.Clamp(float.IsNaN(cmd.U) ? 0f : cmd.U, 0f, MaxU);
+            float a = Mathf.Clamp(float.IsNaN(cmd.Alpha) ? 0f : cmd.Alpha, 0f, MaxAlpha);
             if (SoftBudget) u = ApplySoftBudget(u, a, Dynamics.Delay, Dynamics.MaxDelay);
 
             Dynamics.Step(ctx.Dt, u, a);
@@ -92,6 +93,9 @@ namespace RemappingTime
             Phase = cmd.Phase ?? "";
             History.Add((float)ctx.Time, (float)Dynamics.Delay, Rate, u, a);
         }
+
+        /// <summary>Largest u and α a policy can apply: enough for instant cuts of up to 10 s (u = 1000·D, α = 1000).</summary>
+        public const float MaxU = 10000f, MaxAlpha = 1000f;
 
         private static float ApplySoftBudget(float u, float alpha, double delay, double maxDelay)
         {
