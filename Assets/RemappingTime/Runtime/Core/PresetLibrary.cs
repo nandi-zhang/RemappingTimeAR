@@ -333,10 +333,10 @@ namespace RemappingTime
 
             // Discontinuous counterexamples. δ settles at u/α, and a huge α gets it there within one frame, so
             // u = 1000·D, α = 1000 cuts the view straight to D seconds ago: a jump, with no slowdown or rewind between.
-            yield return RemapPreset.Fn("Cut back", "Hold to cut k1 seconds into the past, release to cut back to the present: the view jumps instead of flowing.",
+            yield return RemapPreset.Fn("Cut back", "A counterexample: hold to cut k1 seconds into the past, release to cut back to the present. Try it to feel what it is like when your reality gets cut, and why the model keeps it continuous.",
                 "hold", "on ? 1000 * k1 : 0", "1000", new[] { ("cut back seconds", 1.5f) }).AsAdvanced();
 
-            yield return RemapPreset.Fn("Jump cuts", "Every k1 seconds the view cuts to a random moment up to k2 seconds ago, like a film edit of your surroundings.",
+            yield return RemapPreset.Fn("Jump cuts", "A counterexample: every k1 seconds the view cuts to a random moment up to k2 seconds ago, like a film edit of your surroundings. Try it to feel what it is like when your reality gets cut, and why the model keeps it continuous.",
                 "1", "1000 * k2 * noise(floor(t / k1))", "1000", new[] { ("shot length seconds", 1.2f), ("longest cut back seconds", 1.5f) }).AsAdvanced();
         }
     }

@@ -253,8 +253,9 @@ Presets come in two lists. The **main presets** are the most representative desi
 
 **Cuts (discontinuous counterexamples).** δ settles at u/α, and α sets how fast it gets there, so very large values
 jump the view instead of moving it continuously: u = `1000 * D`, α = `1000` cuts straight to D seconds ago, with no
-slowdown or rewind in between. *Cut back* and *Jump cuts* use this to show what time remapping looks like without
-continuity, for comparison with the continuous presets.
+slowdown or rewind in between. *Cut back* and *Jump cuts* are counterexamples built this way: try them to feel what it is like
+when your reality gets cut, and why the model keeps the displayed time continuous (δ changes smoothly, so the world
+slows, freezes or rewinds, but never jumps).
 
 The headset's X button steps through the main presets; the operator page lists both. Presets saved from the operator page live in
 `/sdcard/Android/data/org.remappingtime.demo/files/remapping_presets.json`.
