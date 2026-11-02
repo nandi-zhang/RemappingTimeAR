@@ -169,11 +169,17 @@ namespace RemappingTime.Remote
                     break;
 
                 case "preset":
-                    if (isOperator && !engine.ApplyPreset(m.name)) Notice(client, "error", $"No preset '{m.name}'.");
+                    if (!isOperator) return;
+                    if (!engine.ApplyPreset(m.name)) Notice(client, "error", $"No preset '{m.name}'.");
+                    else if (engine.LastPresetError.Length > 0) Notice(client, "error", engine.LastPresetError);
                     break;
 
                 case "savePreset":
-                    if (isOperator) { engine.SavePreset(m.name); Notice(client, "info", $"Saved preset '{m.name}'."); }
+                    if (!isOperator) return;
+                    string saved = engine.SavePreset(m.name);
+                    if (saved == null) Notice(client, "error", "Give the preset a name first.");
+                    else if (saved == m.name.Trim()) Notice(client, "info", $"Saved preset '{saved}'.");
+                    else Notice(client, "info", $"Saved as '{saved}': a built-in preset is called '{m.name.Trim()}'.");
                     break;
 
                 case "deletePreset":
@@ -197,6 +203,13 @@ namespace RemappingTime.Remote
         }
 
         private static string FormulaName(string id) => id == "alpha" ? "α" : id;
+
+        private string KnobName(string tunableId)
+        {
+            FunctionPolicy fn = engine.Function;
+            if (fn == null) return "";
+            return tunableId == "fn.k1" ? fn.KnobName(1) : tunableId == "fn.k2" ? fn.KnobName(2) : tunableId == "fn.k3" ? fn.KnobName(3) : "";
+        }
 
         private void RunAction(string name)
         {
@@ -255,6 +268,7 @@ namespace RemappingTime.Remote
                     id = t.Id, label = t.Label, group = t.Group, unit = t.Unit, help = t.Help,
                     min = t.Min, max = t.Max, step = t.Step, value = t.Value, def = t.Default,
                     options = t.Options ?? Array.Empty<string>(),
+                    unused = t.Unused, varName = KnobName(t.Id),
                 });
             }
 

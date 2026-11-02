@@ -276,7 +276,7 @@ namespace RemappingTime
         {
             string selectedId = Selected()?.Id;
             _items.Clear();
-            foreach (Tunable t in engine.AllTunables()) if (!t.Hidden) _items.Add(t);
+            foreach (Tunable t in engine.AllTunables()) if (!t.Hidden && !t.Unused) _items.Add(t);
             int idx = selectedId == null ? -1 : _items.FindIndex(t => t.Id == selectedId);
             _cursor = Mathf.Clamp(idx >= 0 ? idx : _cursor, 0, Mathf.Max(0, _items.Count - 1));
             _itemsDirty = false;

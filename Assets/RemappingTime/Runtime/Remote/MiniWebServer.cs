@@ -149,7 +149,7 @@ namespace RemappingTime.Remote
                 int q = path.IndexOf('?');
                 if (q >= 0) path = path.Substring(0, q);
 
-                string key = null;
+                string key = null, origin = null, host = null;
                 bool upgrade = false;
                 foreach (string line in lines)
                 {
@@ -158,6 +158,8 @@ namespace RemappingTime.Remote
                     string name = line.Substring(0, colon).Trim();
                     string value = line.Substring(colon + 1).Trim();
                     if (name.Equals("Sec-WebSocket-Key", StringComparison.OrdinalIgnoreCase)) key = value;
+                    if (name.Equals("Origin", StringComparison.OrdinalIgnoreCase)) origin = value;
+                    if (name.Equals("Host", StringComparison.OrdinalIgnoreCase)) host = value;
                     if (name.Equals("Upgrade", StringComparison.OrdinalIgnoreCase) &&
                         value.Equals("websocket", StringComparison.OrdinalIgnoreCase)) upgrade = true;
                 }
@@ -165,6 +167,16 @@ namespace RemappingTime.Remote
                 if (!upgrade || key == null)
                 {
                     ServeHttp(stream, path);
+                    tcp.Close();
+                    return;
+                }
+
+                // Browsers always send Origin: refuse pages from other sites, which could otherwise take operator
+                // control from any tab open on the laptop. Scripts without an Origin (Python, TouchDesigner, …) are fine.
+                if (origin != null && !OriginMatchesHost(origin, host))
+                {
+                    byte[] forbidden = Encoding.ASCII.GetBytes("HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+                    stream.Write(forbidden, 0, forbidden.Length);
                     tcp.Close();
                     return;
                 }
@@ -224,6 +236,14 @@ namespace RemappingTime.Remote
             stream.Write(head, 0, head.Length);
             stream.Write(body, 0, body.Length);
             stream.Flush();
+        }
+
+        private static bool OriginMatchesHost(string origin, string host)
+        {
+            if (string.IsNullOrEmpty(host)) return false;
+            int scheme = origin.IndexOf("://", StringComparison.Ordinal);
+            string originHost = scheme >= 0 ? origin.Substring(scheme + 3).TrimEnd('/') : origin;
+            return string.Equals(originHost, host, StringComparison.OrdinalIgnoreCase);
         }
 
         private static string ReadHttpHeader(NetworkStream stream)

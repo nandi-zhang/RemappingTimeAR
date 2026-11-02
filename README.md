@@ -204,11 +204,13 @@ where the sliders appear as `uon`, `aon` and `aoff`:
 **Variables:** `t` time · `d` current delay δ · `B` buffer budget · `hold` 0–1 · `speed` fastest hand in
 view (m/s) · `lspeed`, `rspeed` per hand · `depth` how deep a hand is in the water (m) · `inzone` · `on` · `ton` · `toff`
 · `tap` seconds since the last Tap (A) · `uon aon aoff` the three sliders · `k1 k2 k3` **self-defined variables** (0–10,
-for any extra number a formula needs; each preset names its own, and they get sliders only when a formula uses them).
+for any extra number a formula needs). Switch them on under *Advanced → Self-defined variables* on the operator page,
+give each a name, and write it in a formula (e.g. u = `on ? uon * smoothstep(0, k1, ton) : 0`). While a formula uses
+one, the switch stays on; presets that use them name their own.
 
 **Language:** `+ − * / % ^`, comparisons, `&& || !`, `c ? a : b`, `pi`, and `sin cos tan abs sqrt exp log floor ceil
 round sign sat min max pow step clamp lerp smoothstep noise`. A value counts as true when it is above 0.5.
-Sliders that no formula uses are hidden.
+Sliders that no formula reads are dimmed on the operator page (with a note saying so) and left out of the headset's menu.
 
 **Drawn shapes** (under Advanced): **u(t)**, drawn over seconds since triggered, and **α(t)**, drawn over seconds since
 released. Drag points, double-click to add or remove; a "now" line shows where the effect is while it runs, and *Use this

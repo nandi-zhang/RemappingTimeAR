@@ -57,8 +57,10 @@
   .advanced > summary { cursor: pointer; color: var(--cool); font-weight: 600; }
   .card h3 { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; font-weight: 600; }
   .card h3 small { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 6px; }
-  .param .name.knob { cursor: pointer; }
-  .param .name.unused { opacity: 0.45; }
+  .param.unused .name, .param.unused .val, .param.unused input[type=range] { opacity: 0.5; }
+  .param .name small.note { font-style: italic; }
+  .param .name input.kname { margin-left: 8px; width: 62%; padding: 2px 6px; font: inherit; border-style: dashed; }
+  .varhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .card h2 small { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 6px; }
   .hand.drive span:first-child { color: var(--text); font-weight: 650; }
   .desc { color: var(--muted); font-size: 13px; margin-top: 10px; }
@@ -166,9 +168,12 @@
           <code>c ? a : b</code> picks a when c is true. Press <b>Enter</b> to apply a formula.
         </div>
 
-        <h3>Self-defined variables<small>· k1, k2, k3 in the formulas · click a name to rename it</small></h3>
+        <div class="varhead">
+          <h3>Self-defined variables<small>· up to three numbers of your own (k1, k2, k3) for the formulas</small></h3>
+          <label class="switch" title="Show k1, k2 and k3"><input type="checkbox" id="varsOn"><span></span></label>
+        </div>
+        <div class="desc" id="varsNote"></div>
         <div class="group" id="varParams"></div>
-        <div class="desc" id="noVars">The current formulas don't use any. Write k1, k2 or k3 in a formula to add a slider for it.</div>
 
         <h3>Drawn shapes<small>· drag points · double-click to add or remove</small></h3>
         <div id="curves"></div>
@@ -251,7 +256,7 @@
   function connect() {
     ws = new WebSocket(`ws://${location.host}/ws`);
     ws.onopen = () => { setConn(true); hello(); log('Connected to the headset.'); };
-    ws.onclose = () => { if (wasConnected) log('Lost connection, retrying…', 'error'); setConn(false); setTimeout(connect, 1000); };
+    ws.onclose = () => { holding = false; $('hold').classList.remove('active'); if (wasConnected) log('Lost connection, retrying…', 'error'); setConn(false); setTimeout(connect, 1000); };
     ws.onerror = () => ws.close();
     ws.onmessage = e => {
       const m = JSON.parse(e.data);
@@ -503,6 +508,10 @@
     $('presetDelete').disabled = !o || o.dataset.cat !== 'saved' || !(schema && schema.role === 'operator');
   }
   $('presetSelect').addEventListener('change', showPresetDesc);
+  $('varsOn').addEventListener('change', () => {
+    store.set('rt.vars', $('varsOn').checked ? '1' : '0');
+    if (schema) buildTunables(schema.tunables, schema.role === 'operator');
+  });
 
   function buildTunables(list, isOp) {
     const root = $('tunables'); root.innerHTML = '';
@@ -516,8 +525,19 @@
     const basic = $('basicParams'), vars = $('varParams');
     basic.innerHTML = ''; vars.innerHTML = '';
     for (const t of groups['Time'] || []) basic.appendChild(makeControl(t, isOp));
-    for (const t of groups['Self-defined'] || []) vars.appendChild(makeControl(t, isOp));
-    $('noVars').style.display = (groups['Self-defined'] || []).length ? 'none' : '';
+    // Self-defined variables are switched on here (remembered in this browser). While the formulas use one,
+    // they stay on, so a value that is in effect can't be hidden.
+    const varList = groups['Self-defined'] || [];
+    const varsUsed = varList.some(t => !t.unused);
+    const varsOn = varsUsed || store.get('rt.vars') === '1';
+    const sw = $('varsOn');
+    sw.checked = varsOn; sw.disabled = !isOp || varsUsed;
+    sw.parentElement.title = varsUsed ? 'On while the current formulas use them' : 'Show k1, k2 and k3';
+    vars.style.display = varsOn ? '' : 'none';
+    $('varsNote').textContent = varsUsed ? 'The current formulas use them, so they stay on. Name them so you remember what each one does.'
+      : varsOn ? 'Write k1, k2 or k3 in a formula (e.g. u = on ? k1 : 0) and its slider takes effect. Unused ones are dimmed.'
+      : 'Off. Switch on to add up to three numbers of your own (k1, k2, k3) that your formulas can use.';
+    if (varsOn) for (const t of varList) vars.appendChild(makeControl(t, isOp));
     delete groups['Time']; delete groups['Self-defined'];
     // Effects follow the design space of time remapping; the rest are setup.
     const order = [
@@ -549,23 +569,32 @@
   };
 
   function makeControl(t, isOp) {
-    const el = document.createElement('div'); el.className = 'param';
+    const el = document.createElement('div'); el.className = 'param' + (t.unused ? ' unused' : '');
     const name = document.createElement('div'); name.className = 'name';
     name.textContent = t.label; name.title = (t.help ? t.help + '\n' : '') + 'Double-click to reset to default.';
-    if (t.help) { const s = document.createElement('small'); s.textContent = t.help; name.appendChild(s); }
-    name.ondblclick = () => { if (isOp) { setParam(t.id, t.def); controls[t.id].update(t.def, true); } };
-    // Self-defined variables (fn.k1..k3): click the name to rename it.
+    name.ondblclick = e => { if (isOp && e.target.tagName !== 'INPUT') { setParam(t.id, t.def); controls[t.id].update(t.def, true); } };
+    // Self-defined variables (fn.k1..k3): "k1" plus a name field (Enter or leaving the field applies; empty = no name).
     const knob = /^fn\.k([123])$/.exec(t.id);
     if (knob) {
-      name.classList.add('knob');
-      if (/unused/.test(t.label)) name.classList.add('unused');
-      name.title = 'Click to rename. Double-click to reset the value.';
-      name.onclick = () => {
-        if (!isOp) return;
-        const current = t.label.includes('·') ? t.label.split('·')[1].trim() : '';
-        const label = prompt(`Name for self-defined variable k${knob[1]} (what it controls in your formulas):`, current);
-        if (label !== null) send({ type: 'knobLabel', id: knob[1], name: label });
-      };
+      const given = t.varName || '';
+      name.textContent = 'k' + knob[1];
+      name.title = 'Double-click to reset the value.';
+      const inp = document.createElement('input');
+      inp.type = 'text'; inp.className = 'kname'; inp.maxLength = 40; inp.value = given; inp.disabled = !isOp;
+      inp.placeholder = 'name it (optional)'; inp.spellcheck = false;
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
+        if (e.key === 'Escape') { inp.value = given; inp.blur(); }
+      });
+      inp.addEventListener('blur', () => { if (inp.value.trim() !== given) send({ type: 'knobLabel', id: knob[1], name: inp.value.trim() }); });
+      name.appendChild(inp);
+    }
+    if (t.help) { const s = document.createElement('small'); s.textContent = t.help; name.appendChild(s); }
+    if (t.unused) {
+      const s = document.createElement('small'); s.className = 'note';
+      const short = t.id.replace(/^fn\./, '');
+      s.textContent = knob ? `not used yet: write ${short} in a formula to use it` : `not used by the current formulas (they don't read ${short})`;
+      name.appendChild(s);
     }
     el.appendChild(name);
 
@@ -716,8 +745,10 @@
     else if (e.code === 'KeyP') send({ type: 'action', name: 'trigger' });
     else if (e.code === 'KeyL') send({ type: 'action', name: 'live' });
   });
-  document.addEventListener('keyup', e => { if (e.code === 'Space' && !typing(e)) { e.preventDefault(); releaseHold(); } });
+  // Releasing Space always ends a hold, even if focus moved into a text field meanwhile (otherwise it would stick).
+  document.addEventListener('keyup', e => { if (e.code === 'Space' && holding) { if (!typing(e)) e.preventDefault(); releaseHold(); } });
   window.addEventListener('blur', releaseHold);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) releaseHold(); });
 
   connect();
 })();

@@ -18,7 +18,7 @@ namespace RemappingTime
     {
         /// <summary>Stable identifier used by presets and the network protocol, e.g. "hold.speed".</summary>
         public readonly string Id;
-        /// <summary>Display name. Settable so presets can name generic knobs (e.g. "k1 · slowdown").</summary>
+        /// <summary>Display name. Settable so presets can name generic knobs (e.g. "k1 (slowdown)").</summary>
         public string Label { get; set; }
         /// <summary>UI grouping, e.g. "Policy", "View", "Tracking", "Engine".</summary>
         public string Group;
@@ -50,8 +50,14 @@ namespace RemappingTime
         public static Tunable Toggle(string id, string label, bool def, string help = "")
             => Choice(id, label, new[] { "Off", "On" }, def ? 1 : 0, help);
 
-        /// <summary>Hidden tunables keep working but are left out of the HUD and web UI (e.g. knobs no formula uses).</summary>
+        /// <summary>Hidden tunables keep working but are left out of the HUD and web UI.</summary>
         public bool Hidden { get; set; }
+
+        /// <summary>
+        /// Not read by anything right now (e.g. a slider no formula uses). The web page still lists it, dimmed, so
+        /// it doesn't seem to vanish; the compact headset menu leaves it out.
+        /// </summary>
+        public bool Unused { get; set; }
 
         public bool IsChoice => Options != null;
         public bool IsToggle => Options != null && Options.Length == 2 && Options[0] == "Off" && Options[1] == "On";

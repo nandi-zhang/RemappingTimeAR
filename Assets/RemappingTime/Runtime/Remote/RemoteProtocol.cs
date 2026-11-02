@@ -66,6 +66,10 @@ namespace RemappingTime.Remote
         public string id, label, group, unit, help;
         public float min, max, step, value, def;
         public string[] options;
+        /// <summary>No formula reads it right now (shown dimmed).</summary>
+        public bool unused;
+        /// <summary>Self-defined variables only: the name given to it ("" if none).</summary>
+        public string varName = "";
     }
 
     /// <summary>Sent on connect and whenever the set of policies, tunables or presets changes.</summary>

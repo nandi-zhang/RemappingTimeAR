@@ -33,7 +33,7 @@ If the bridge has an operator PIN and it does not match, the client stays a remo
 | `action` | `name` | `trigger` (same as the A button: resets `tap`), `live` (snap to live), `moveWater` (water block in front of the wearer), `resetKnobs`. |
 | `set` | `id`, `value` | Set a tunable (see `schema.tunables`). Choices take the option index; toggles take 0/1. |
 | `expr` | `id`, `name` | Set a formula: `id` = `when`, `u` or `alpha`, `name` = the formula text. Replies with a `notice`: `"u = …"` when applied, `"u: <error>"` when not (the previous formula stays). |
-| `knobLabel` | `id`, `name` | Rename knob `id` = `1`, `2` or `3`. |
+| `knobLabel` | `id`, `name` | Name self-defined variable k`id` (`1`, `2` or `3`); an empty `name` removes the name. |
 | `policy` | `id` | Switch policy (only relevant if custom policies are registered; the built-in one is `fn`). |
 | `preset` | `name` | Apply a preset. |
 | `savePreset` | `name` | Save the current policy + policy/view values as a user preset. |
@@ -52,15 +52,17 @@ If the bridge has an operator PIN and it does not match, the client stays a remo
   "function": { "when": "hold", "u": "on ? uon : 0", "alpha": "on ? aon : aoff", "triggerHint": "hold the right trigger",
                 "variables": [ "t", "d", "…" ], "variableHelp": [ "…" ], "functions": [ "sin", "…" ],
                 "usesHold": true, "usesTrigger": false, "usesWater": false, "usesMotion": false },
-  "tunables": [ { "id": "fn.k1", "label": "k1 · slowdown u", "group": "Policy", "unit": "",
-                  "help": "…", "min": 0, "max": 10, "step": 0.01, "value": 0.8, "def": 0.8, "options": [] } ],
+  "tunables": [ { "id": "fn.k1", "label": "k1 (ease-in seconds)", "group": "Self-defined", "unit": "",
+                  "help": "…", "min": 0, "max": 10, "step": 0.01, "value": 1.5, "def": 1, "options": [],
+                  "unused": false, "varName": "ease-in seconds" } ],
   "presets": [ "Live", "Hold to slow", "…" ], "presetDescriptions": [ "…", "…" ],
   "presetCategories": [ "main", "main", "…" ],
   "actions": [ "live", "trigger", "moveWater", "resetKnobs" ]
 }
 ```
 
-A tunable with a non-empty `options` array is a choice, and `["Off","On"]` is a toggle.
+A tunable with a non-empty `options` array is a choice, and `["Off","On"]` is a toggle. `unused` is true when no
+formula reads it (the operator page dims it). `varName` is the name of a self-defined variable (`fn.k1`–`fn.k3`), or `""`.
 `presetCategories` groups the presets: `main` (representative), `advanced` (specialised, usually with self-defined
 variables) or `saved` (saved on this headset).
 

@@ -39,6 +39,9 @@ namespace RemappingTime.EditorTools
             }
         }
 
+        /// <summary>The Android package name. Saved presets live under /sdcard/Android/data/&lt;id&gt;/files.</summary>
+        public const string ApplicationId = "org.remappingtime.demo";
+
         public static BuildReport Build()
         {
             if (!File.Exists(DemoSceneBuilder.ScenePath) || !SceneIsComplete())
@@ -47,6 +50,13 @@ namespace RemappingTime.EditorTools
                 DemoSceneBuilder.Build();
             }
             Directory.CreateDirectory(Path.GetDirectoryName(OutputPath));
+            // Unity derives "com.Company.Product" whenever the override is off; a different id would install a second
+            // app that can't see the presets saved by the first.
+            if (PlayerSettings.GetApplicationIdentifier(UnityEditor.Build.NamedBuildTarget.Android) != ApplicationId)
+            {
+                Debug.LogWarning($"[RemappingTime] Application id was changed; setting it back to {ApplicationId}.");
+                PlayerSettings.SetApplicationIdentifier(UnityEditor.Build.NamedBuildTarget.Android, ApplicationId);
+            }
 
             var options = new BuildPlayerOptions
             {

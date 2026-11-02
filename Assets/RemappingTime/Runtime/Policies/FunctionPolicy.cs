@@ -176,15 +176,38 @@ namespace RemappingTime
                 case "alpha": case "α": _alpha = expr; AlphaSource = source; break;
                 default: error = $"unknown formula '{which}'"; return false;
             }
-            // Only show the knobs the formulas actually use.
-            Knob1.Hidden = !Reads(K1);
-            Knob2.Hidden = !Reads(K2);
-            Knob3.Hidden = !Reads(K3);
-            UWhenOn.Hidden = !Reads(UOn);
-            AlphaWhenOn.Hidden = !Reads(AOn);
-            AlphaWhenOff.Hidden = !Reads(AOff);
+            // Mark the sliders no formula reads (the web page dims them, the headset menu leaves them out).
+            Knob1.Unused = !Reads(K1);
+            Knob2.Unused = !Reads(K2);
+            Knob3.Unused = !Reads(K3);
+            UWhenOn.Unused = !Reads(UOn);
+            AlphaWhenOn.Unused = !Reads(AOn);
+            AlphaWhenOff.Unused = !Reads(AOff);
             ExpressionsChanged?.Invoke();
             return true;
+        }
+
+        private readonly string[] _knobNames = { "", "", "" };
+
+        /// <summary>The name given to self-defined variable k<paramref name="knob"/> (1–3), or "" if unnamed.</summary>
+        public string KnobName(int knob) => knob >= 1 && knob <= 3 ? _knobNames[knob - 1] : "";
+
+        /// <summary>
+        /// Names self-defined variable k<paramref name="knob"/> (1–3); an empty name removes it. The slider then reads
+        /// "k1 (name)". A "k1" typed in front of the name and surrounding parentheses are dropped.
+        /// </summary>
+        public void SetKnobName(int knob, string name)
+        {
+            if (knob < 1 || knob > 3) return;
+            name = (name ?? "").Trim();
+            name = System.Text.RegularExpressions.Regex.Replace(name, $@"^k{knob}\b[\s:=\-]*", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            name = System.Text.RegularExpressions.Regex.Replace(name, @"[<>\p{Cc}]", "");
+            name = System.Text.RegularExpressions.Regex.Replace(name, @"\s+", " ").Trim();
+            if (name.StartsWith("(") && name.EndsWith(")")) name = name.Substring(1, name.Length - 2).Trim();
+            if (name.Length > 40) name = name.Substring(0, 40).Trim();
+            _knobNames[knob - 1] = name;
+            Tunable k = knob == 1 ? Knob1 : knob == 2 ? Knob2 : Knob3;
+            k.Label = name.Length == 0 ? $"k{knob}" : $"k{knob} ({name})";
         }
 
         /// <summary>Default shapes: c1 eases into 0.9 and back out; c2 starts gentle and strengthens.</summary>

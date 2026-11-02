@@ -107,24 +107,39 @@ namespace RemappingTime
             return names;
         }
 
-        /// <summary>Saves (or overwrites) a user preset and persists all user presets to disk.</summary>
-        public void Save(RemapPreset preset)
+        /// <summary>
+        /// The name a preset saved as <paramref name="name"/> will get: the same name (overwriting an earlier user
+        /// preset), or "name (custom)", "name (custom 2)", … when a built-in preset already has it.
+        /// </summary>
+        public string ResolveSaveName(string name)
+        {
+            name = (name ?? "").Trim();
+            RemapPreset existing = Find(name);
+            if (existing == null || !existing.builtIn) return name;
+            for (int n = 1; ; n++)
+            {
+                string candidate = n == 1 ? $"{name} (custom)" : $"{name} (custom {n})";
+                RemapPreset other = Find(candidate);
+                if (other == null || !other.builtIn) return candidate;
+            }
+        }
+
+        /// <summary>Saves (or overwrites) a user preset and persists all user presets to disk. Returns its final name.</summary>
+        public string Save(RemapPreset preset)
         {
             preset.builtIn = false;
+            preset.name = ResolveSaveName(preset.name);
             int i = _presets.FindIndex(p => string.Equals(p.name, preset.name, StringComparison.OrdinalIgnoreCase));
-            if (i >= 0)
-            {
-                if (_presets[i].builtIn) preset.name += " (custom)";
-                else { _presets[i] = preset; Persist(); Changed?.Invoke(); return; }
-            }
-            _presets.Add(preset);
+            if (i >= 0) _presets[i] = preset;
+            else _presets.Add(preset);
             Persist();
             Changed?.Invoke();
+            return preset.name;
         }
 
         public bool Delete(string name)
         {
-            int i = _presets.FindIndex(p => p.name == name && !p.builtIn);
+            int i = _presets.FindIndex(p => string.Equals(p.name, name, StringComparison.OrdinalIgnoreCase) && !p.builtIn);
             if (i < 0) return false;
             _presets.RemoveAt(i);
             Persist();
@@ -144,20 +159,29 @@ namespace RemappingTime
             }
         }
 
-        /// <summary>Installs a preset's formulas and knob names on a time-function policy.</summary>
-        public static void ApplyFunction(RemapPreset preset, FunctionPolicy fn)
+        /// <summary>
+        /// Installs a preset's formulas and knob names on a time-function policy. If a formula doesn't compile (e.g. a
+        /// hand-edited file), the policy falls back to live (when = 0, u = 0, α = 5) rather than keeping the previous
+        /// preset's formulas, and false is returned.
+        /// </summary>
+        public static bool ApplyFunction(RemapPreset preset, FunctionPolicy fn)
         {
+            bool ok = true;
             if (!string.IsNullOrEmpty(preset.u) || !string.IsNullOrEmpty(preset.when))
-                fn.SetExpressions(preset.when ?? "0", preset.u ?? "0", preset.alpha ?? "5");
+            {
+                ok = fn.SetExpressions(preset.when ?? "0", preset.u ?? "0", preset.alpha ?? "5");
+                if (!ok)
+                {
+                    fn.SetExpressions("0", "0", "5");
+                    Debug.LogWarning($"[RemappingTime] Preset '{preset.name}' has a formula that doesn't compile; using live instead.");
+                }
+            }
             fn.ResetCurves();
             if (preset.curves != null)
                 foreach (CurveData c in preset.curves) fn.FindCurve(c.name)?.SetPoints(c.xs, c.ys);
-            Tunable[] knobs = { fn.Knob1, fn.Knob2, fn.Knob3 };
-            for (int k = 0; k < knobs.Length; k++)
-            {
-                string label = preset.knobs != null && k < preset.knobs.Length ? preset.knobs[k] : "";
-                knobs[k].Label = string.IsNullOrEmpty(label) ? $"k{k + 1}" : $"k{k + 1} · {label}";
-            }
+            for (int k = 0; k < 3; k++)
+                fn.SetKnobName(k + 1, preset.knobs != null && k < preset.knobs.Length ? preset.knobs[k] : "");
+            return ok;
         }
 
         private void LoadUserPresets()
@@ -169,13 +193,19 @@ namespace RemappingTime
                 if (file?.presets == null) return;
                 foreach (RemapPreset p in file.presets)
                 {
+                    if (p == null || string.IsNullOrWhiteSpace(p.name)) continue;
                     p.builtIn = false;
+                    // A name a newer version gave to a built-in: keep the user's preset under a free name.
+                    p.name = ResolveSaveName(p.name);
                     if (Find(p.name) == null) _presets.Add(p);
                 }
             }
             catch (Exception e)
             {
+                // Keep the unreadable file, so the next save doesn't overwrite the presets in it.
                 Debug.LogWarning($"[RemappingTime] Could not read presets: {e.Message}");
+                try { File.Copy(FilePath, FilePath + $".unreadable-{DateTime.Now:yyyyMMdd-HHmmss}", true); }
+                catch (Exception) { /* nothing more we can do */ }
             }
         }
 
@@ -184,7 +214,11 @@ namespace RemappingTime
             try
             {
                 var file = new PresetFile { presets = _presets.FindAll(p => !p.builtIn).ToArray() };
-                File.WriteAllText(FilePath, JsonUtility.ToJson(file, true));
+                // Write a temporary file first, so a crash mid-write never leaves a truncated preset file.
+                string tmp = FilePath + ".tmp";
+                File.WriteAllText(tmp, JsonUtility.ToJson(file, true));
+                if (File.Exists(FilePath)) File.Delete(FilePath);
+                File.Move(tmp, FilePath);
             }
             catch (Exception e)
             {

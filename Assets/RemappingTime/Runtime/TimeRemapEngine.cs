@@ -188,7 +188,9 @@ namespace RemappingTime
             if (!SelectPolicy(string.IsNullOrEmpty(preset.policy) ? "fn" : preset.policy)) SelectPolicy(_policies[0].Id);
             foreach (Tunable t in ActivePolicy.Params) t.ResetToDefault();
             if (view != null) foreach (Tunable t in view.Params) t.ResetToDefault();
-            if (ActivePolicy is FunctionPolicy fn) PresetLibrary.ApplyFunction(preset, fn);
+            LastPresetError = "";
+            if (ActivePolicy is FunctionPolicy fn && !PresetLibrary.ApplyFunction(preset, fn))
+                LastPresetError = $"Preset '{preset.name}' has a formula that doesn't compile, so live is used instead.";
             foreach (ParamValue pv in preset.values) SetTunable(pv.id, pv.v);
             if (ActivePolicy.UsesZone && zone != null && !zone.HasBeenPlaced) zone.PlaceInFront(HeadPose());
 
@@ -200,26 +202,30 @@ namespace RemappingTime
             return true;
         }
 
-        /// <summary>Saves the active policy and all policy/view values under <paramref name="name"/>.</summary>
-        public void SavePreset(string name)
+        /// <summary>Set by <see cref="ApplyPreset"/> when the preset's formulas could not be installed ("" otherwise).</summary>
+        public string LastPresetError { get; private set; } = "";
+
+        /// <summary>
+        /// Saves the active policy and all policy/view values under <paramref name="name"/> (or "name (custom)" if a
+        /// built-in preset has that name). Returns the name it was saved under, or null if the name is empty.
+        /// </summary>
+        public string SavePreset(string name)
         {
-            if (string.IsNullOrWhiteSpace(name)) return;
+            if (string.IsNullOrWhiteSpace(name)) return null;
             var values = new List<ParamValue>();
             foreach (Tunable t in ActivePolicy.Params) values.Add(new ParamValue(t.Id, t.Value));
             if (view != null) foreach (Tunable t in view.Params) values.Add(new ParamValue(t.Id, t.Value));
-            ActivePresetName = name.Trim(); // set first: saving rebuilds the preset choice around it
+            ActivePresetName = Presets.ResolveSaveName(name); // set first: saving rebuilds the preset choice around it
             var preset = new RemapPreset { name = ActivePresetName, policy = ActivePolicy.Id, values = values.ToArray() };
             if (ActivePolicy is FunctionPolicy fn)
             {
                 preset.when = fn.WhenSource;
                 preset.u = fn.USource;
                 preset.alpha = fn.AlphaSource;
-                // Store knob names without the "k1 · " prefix the UI adds.
-                preset.knobs = new[] { fn.Knob1, fn.Knob2, fn.Knob3 }
-                    .Select(k => k.Label.Contains("·") ? k.Label.Substring(k.Label.IndexOf('·') + 1).Trim() : "").ToArray();
+                preset.knobs = new[] { fn.KnobName(1), fn.KnobName(2), fn.KnobName(3) };
                 preset.curves = fn.Curves.Select(c => new CurveData { name = c.Name, xs = c.Xs, ys = c.Ys }).ToArray();
             }
-            Presets.Save(preset);
+            return Presets.Save(preset);
         }
 
         /// <summary>The time-function policy, if it is the active one.</summary>
@@ -242,16 +248,23 @@ namespace RemappingTime
             return c != null && c.SetPoints(xs, ys);
         }
 
-        /// <summary>Renames a knob (k1..k3) of the active time function.</summary>
+        /// <summary>Names a self-defined variable (k1..k3) of the active time function; "" removes the name.</summary>
         public void SetKnobLabel(int knob, string label)
         {
             if (Function == null || knob < 1 || knob > 3) return;
-            Tunable k = knob == 1 ? Function.Knob1 : knob == 2 ? Function.Knob2 : Function.Knob3;
-            k.Label = string.IsNullOrWhiteSpace(label) ? $"k{knob}" : $"k{knob} · {label.Trim()}";
+            Function.SetKnobName(knob, label);
             SchemaChanged?.Invoke();
         }
 
-        public void DeletePreset(string name) => Presets.Delete(name);
+        public void DeletePreset(string name)
+        {
+            // Clear the active name first if it is the preset being deleted (deleting rebuilds the preset choice).
+            RemapPreset target = Presets.Find(name);
+            if (target != null && !target.builtIn && string.Equals(target.name, ActivePresetName, StringComparison.OrdinalIgnoreCase))
+                ActivePresetName = "";
+            Presets.Delete(name);
+            SchemaChanged?.Invoke();
+        }
 
         public void ResetPolicyParams()
         {
@@ -267,7 +280,8 @@ namespace RemappingTime
         {
             if (gallery == null) return;
             if (on) gallery.Show(Presets, HeadPose()); else gallery.Hide();
-            if (_galleryToggle.On != on) _galleryToggle.Value = on ? 1 : 0;
+            // Show does nothing before the cameras are ready; keep the toggle truthful.
+            if (_galleryToggle.On != gallery.Visible) _galleryToggle.Value = gallery.Visible ? 1 : 0;
         }
 
         public Pose HeadPose() => head != null ? new Pose(head.position, head.rotation) : new Pose(Vector3.zero, Quaternion.identity);
@@ -313,6 +327,12 @@ namespace RemappingTime
             LastContext = ctx;
 
             if (galleryOpen) gallery.Step(ctx);
+        }
+
+        // After the headset sleeps, the buffer holds frames from before; start from the present again.
+        private void OnApplicationPause(bool paused)
+        {
+            if (!paused) Main.Dynamics.Reset();
         }
 
         private void UpdateZone(ref RemapContext ctx)

@@ -25,6 +25,9 @@ namespace RemappingTime
             "min", "max", "pow", "step", "clamp", "lerp", "smoothstep", "noise",
         };
 
+        /// <summary>Longest accepted formula, and deepest nesting of parentheses / ?: (keeps recursion bounded).</summary>
+        public const int MaxLength = 1000, MaxNesting = 64;
+
         public string Source { get; }
         private readonly Node _root;
 
@@ -34,7 +37,8 @@ namespace RemappingTime
         public float Evaluate(float[] vars)
         {
             float v = _root.Eval(vars);
-            return float.IsNaN(v) || float.IsInfinity(v) ? 0f : v;
+            // NaN (e.g. 0/0) counts as 0; an overflow keeps its sign, so the caller's clamp applies.
+            return float.IsNaN(v) ? 0f : float.IsPositiveInfinity(v) ? float.MaxValue : float.IsNegativeInfinity(v) ? -float.MaxValue : v;
         }
 
         /// <summary>True if the expression reads the named variable (e.g. to know whether a policy needs the water zone).</summary>
@@ -50,6 +54,8 @@ namespace RemappingTime
         {
             expr = null;
             error = null;
+            // Keeps parsing and evaluation (both recursive) far from the stack limit.
+            if (source != null && source.Length > MaxLength) { error = $"formula too long (at most {MaxLength} characters)"; return false; }
             try
             {
                 var p = new Parser(source ?? "", variables, userFunctions);
@@ -262,7 +268,16 @@ namespace RemappingTime
                 return n;
             }
 
+            private int _depth;
+
             private Node ParseConditional()
+            {
+                if (++_depth > MaxNesting) throw Error("formula nested too deeply");
+                try { return ParseConditionalInner(); }
+                finally { _depth--; }
+            }
+
+            private Node ParseConditionalInner()
             {
                 Node c = ParseOr();
                 if (Accept("?"))

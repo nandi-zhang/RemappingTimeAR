@@ -146,6 +146,9 @@ namespace RemappingTime
             _count = 0;
         }
 
+        /// <summary>A gap in the camera feed longer than this empties the buffer.</summary>
+        public const double MaxGapSeconds = 1.0;
+
         /// <summary>
         /// Copies the current camera images into the buffer. Frames must arrive in increasing time order;
         /// a frame that is not newer than the newest buffered frame is ignored.
@@ -154,6 +157,8 @@ namespace RemappingTime
         {
             if (_frames == null) return;
             if (_count > 0 && time <= NewestTime) return;
+            // Frames from before a long gap (the headset slept) can't be blended with new ones: start over.
+            if (_count > 0 && time - NewestTime > MaxGapSeconds) _count = 0;
 
             StereoFrame slot = _frames[_head];
             if (_useCopyTexture)
