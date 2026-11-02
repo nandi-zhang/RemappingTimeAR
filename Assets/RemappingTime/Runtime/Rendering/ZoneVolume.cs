@@ -57,7 +57,7 @@ namespace RemappingTime
         {
             _size = Params.Add(Tunable.Range("water.size", "Water block size", 0.1f, 0.8f, 0.35f, 0.01f, "m"));
             _margin = Params.Add(Tunable.Range("water.margin", "Touch margin", 0f, 0.1f, 0.04f, 0.005f, "m",
-                "The water reacts this far outside its visible surface, so touching the surface is enough."));
+                "The water reacts this far outside its surface."));
             _opacity = Params.Add(Tunable.Range("water.opacity", "Water opacity", 0.2f, 1f, 0.9f, 0.05f));
             _look = Params.Add(Tunable.Choice("water.look", "Material look", new[] { "Water", "Honey" }, 0,
                 "Clear blue water, or thick amber honey."));

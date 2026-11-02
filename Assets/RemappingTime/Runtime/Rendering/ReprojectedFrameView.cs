@@ -64,9 +64,9 @@ namespace RemappingTime
         {
             // Representation: replace the world, blend it as a ghost, or stack past moments as trails.
             _opacity = Add(Representation, Tunable.Range("view.opacity", "Ghost opacity", 0f, 1f, 1f, 0.05f, "",
-                "1 = the remapped world replaces the real one. Lower = a ghost of the past over the live world."));
+                "Lower = a ghost of the past over the live world."));
             _echo = Add(Representation, Tunable.Toggle("view.echo", "Echo trails", false,
-                "Stack earlier moments on top, so moving things leave trails (like a long-exposure photo)."));
+                "Earlier moments trail behind moving things."));
             _echoCount = Add(Representation, Tunable.Range("view.echoCount", "Echo count", 1, MaxEchoes, 3, 1));
             _echoSpacing = Add(Representation, Tunable.Range("view.echoSpacing", "Echo spacing", 0.02f, 0.5f, 0.08f, 0.01f, "s",
                 "Time between successive echoes."));
@@ -74,32 +74,28 @@ namespace RemappingTime
 
             // Scope: the whole view, or a region.
             _scope = Add(Scope, Tunable.Choice("view.scope", "Region", new[] { "Whole view", "Lens" }, 0,
-                "Whole view = everything the cameras see is remapped. Lens = only inside a soft circle."));
+                "Remap the whole view, or only inside a circle."));
             _lensAnchor = Add(Scope, Tunable.Choice("view.lensAnchor", "Lens follows", new[] { "Hand", "Gaze" }, 0));
             _lensRadius = Add(Scope, Tunable.Range("view.lensRadius", "Lens size", 0.05f, 0.6f, 0.2f, 0.01f, "",
                 "Radius as a fraction of the image height."));
 
             // Transparency: how visibly the system signals that time is being remapped.
             _cues = Add(Transparency, Tunable.Toggle("view.cues", "Show remapping cues", true,
-                "On: the remapped view is tinted by playback speed (cool = slowed, warm = fast-forward, violet = rewind) " +
-                "and glows at its edges as delay builds. Off: no visual hint, so the wearer must notice the remapping themselves."));
+                "Tint the remapped view by speed (cool = slower, warm = faster, violet = rewind) and glow its edges as delay builds."));
 
             // Display quality and registration.
             _reproject = Add(Display, Tunable.Choice("view.reprojection", "Head reprojection", new[] { "Off", "Flat plane", "Depth (experimental)" }, 1,
-                "How past frames are placed as you move your head. Flat plane (default): on one plane at the projection distance, " +
-                "clean but exact only at that distance. Depth (experimental): bent to the scene's measured depth (Meta Depth API), " +
-                "so near and far things stay aligned as you move, but the coarse depth map breaks up fine details. " +
-                "Off: the image follows your head."));
+                "How past frames stay in place as you move your head. Depth is experimental."));
             _distance = Add(Display, Tunable.Range("view.distance", "Projection distance", 0.3f, 5f, 1.0f, 0.05f, "m",
                 "Depth that is exactly registered under head motion. Match it to where the action happens."));
             // Fixed at 1 m in the UIs: in practice the difference was hard to perceive. Presets may still set it.
             _distance.Hidden = true;
             _blend = Add(Display, Tunable.Toggle("view.blend", "Frame blending", true,
-                "Cross-fade neighbouring camera frames for smooth slow motion. Off = step from frame to frame."));
+                "Cross-fade neighbouring frames for smoother slow motion."));
             _hideLive = Add(Display, Tunable.Toggle("view.hideLive", "Hide when live", true,
-                "Fade the remapped view out when there is no remapping, revealing the full-quality system passthrough."));
+                "Show the full-quality passthrough when nothing is remapped."));
             _feather = Add(Display, Tunable.Range("view.feather", "Edge softness", 0f, 0.3f, 0.08f, 0.01f, "",
-                "How softly the remapped view blends into the live view at its edges."));
+                "How softly the remapped view blends into the live view."));
 
         }
 

@@ -73,15 +73,13 @@ namespace RemappingTime
         {
             _source = Params.Add(Tunable.Choice("tracking.source", "Tracked point",
                 new[] { "Both hands", "Right hand", "Left hand", "Right controller", "Left controller" }, 0,
-                "What motion policies follow. 'Both hands' lets either hand trigger effects (the faster one in view wins). " +
-                "Each hand falls back to its controller when held. Controllers track fast motion more reliably."));
+                "What motion effects follow. With both hands, the faster one in view counts."));
             _smoothing = Params.Add(Tunable.Range("tracking.smoothing", "Speed smoothing", 0.005f, 0.2f, 0.04f, 0.005f, "s",
-                "Time constant of the velocity filter. Lower reacts faster but is noisier."));
+                "Lower reacts faster but is noisier."));
             _marker = Params.Add(Tunable.Toggle("tracking.marker", "Show real-time marker", false,
-                "Draw a dot at the actual (not remapped) position of each tracked point."));
+                "A dot at the real (not remapped) position of each hand."));
             _viewMargin = Params.Add(Tunable.Range("tracking.viewMargin", "In-view margin", 0f, 0.3f, 0.08f, 0.01f, "",
-                "How far inside the camera image edge a point must be to count as 'in view' (fraction of the image). " +
-                "Keeps triggers away from the feathered border."));
+                "How far inside the image edge a hand must be to count as in view."));
 
             if (rig == null) rig = FindFirstObjectByType<OVRCameraRig>();
         }

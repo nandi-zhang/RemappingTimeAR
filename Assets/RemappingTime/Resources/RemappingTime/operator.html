@@ -22,6 +22,7 @@
   .dot.on { background: var(--ok); }
   .spacer { flex: 1; }
   .url { color: var(--cool); text-decoration: none; font-weight: 600; }
+  button.btn.small { padding: 3px 10px; font-size: 12px; color: var(--muted); }
   main { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(360px, 1.15fr); gap: 16px; padding: 16px; max-width: 1500px; margin: 0 auto; }
   @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 12px; } }
   .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
@@ -35,7 +36,7 @@
   .policy:hover { border-color: #33405a; }
   .policy.active { border-color: var(--cool); box-shadow: inset 0 0 0 1px var(--cool); }
   .policy b { display: block; font-size: 14px; }
-  .fx { display: grid; grid-template-columns: 56px 1fr; align-items: center; gap: 8px; margin-top: 8px; }
+  .fx { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 8px; margin-top: 8px; }
   .fx label { color: var(--muted); font-weight: 600; text-align: right; font-family: ui-monospace, Consolas, monospace; }
   input.code[type=text] { font-family: ui-monospace, Consolas, monospace; font-size: 14px; padding: 9px 10px; width: 100%; }
   input.code.dirty { border-color: var(--warm); }
@@ -47,7 +48,7 @@
   .vars td:first-child { font-family: ui-monospace, Consolas, monospace; color: var(--text); white-space: nowrap; }
   .vars td:last-child { color: var(--muted); }
   .curve { margin-top: 10px; }
-  .curve .head { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+  .curve .head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); }
   .curve .head b { color: var(--text); font-family: ui-monospace, Consolas, monospace; }
   .curve canvas { width: 100%; height: 150px; display: block; background: var(--panel2); border-radius: 8px;
     margin-top: 4px; cursor: crosshair; touch-action: none; }
@@ -56,12 +57,19 @@
   .advanced { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
   .advanced > summary { cursor: pointer; color: var(--cool); font-weight: 600; }
   .card h3 { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; font-weight: 600; }
-  .card h3 small { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 6px; }
   .param.unused .name, .param.unused .val, .param.unused input[type=range] { opacity: 0.5; }
-  .param .name small.note { font-style: italic; }
-  .fxname { color: var(--muted); font-size: 12px; margin-left: 64px; }
+  .fxname { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+  /* "?" that shows its detail on hover (or tap / keyboard focus). */
+  .tip { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-left: 6px;
+    border: 1px solid #333d50; border-radius: 50%; color: var(--muted); font: 600 10.5px/1 system-ui, sans-serif;
+    letter-spacing: 0; text-transform: none; cursor: help; position: relative; vertical-align: 1px; outline: none; }
+  .tip:hover, .tip:focus { color: var(--text); border-color: var(--muted); }
+  .tip::after { content: attr(data-tip); position: absolute; left: -10px; top: calc(100% + 7px); z-index: 30;
+    width: max-content; max-width: 280px; padding: 8px 10px; border-radius: 8px; background: #1b2130; border: 1px solid #2c3647;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5); color: var(--text); font: 400 12.5px/1.45 system-ui, sans-serif; white-space: pre-line;
+    opacity: 0; pointer-events: none; transition: opacity .12s; }
+  .tip:hover::after, .tip:focus::after { opacity: 1; }
   .varhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .card h2 small { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 6px; }
   .hand.drive span:first-child { color: var(--text); font-weight: 650; }
   .desc { color: var(--muted); font-size: 13px; margin-top: 10px; }
   .rowf { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -78,7 +86,6 @@
   .group { display: flex; flex-direction: column; gap: 12px; }
   .param { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
   .param .name { cursor: default; }
-  .param .name small { color: var(--muted); display: block; font-size: 12px; line-height: 1.3; }
   .param .val { font-variant-numeric: tabular-nums; color: var(--cool); font-weight: 600; text-align: right; min-width: 64px; }
   .param input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--cool); }
   .seg { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
@@ -121,7 +128,7 @@
   <span class="chip">web clients <b id="clients">0</b></span>
   <span class="chip">tracking <b id="source">–</b></span>
   <span class="spacer"></span>
-  <span class="chip">phone remote: <a class="url" id="remoteUrl" href="/" target="_blank">–</a></span>
+  <span class="chip"><button class="btn small" id="remoteShow" title="Show the address for a phone">phone remote</button><a class="url" id="remoteUrl" href="/" target="_blank" hidden>–</a></span>
   <form class="pin rowf" id="pinForm"><input type="password" id="pin" placeholder="operator PIN" size="10"><button class="btn primary">Unlock</button></form>
 </header>
 
@@ -134,7 +141,7 @@
     </div>
 
     <div class="card">
-      <h2>Presets<small>· ready-made time functions</small></h2>
+      <h2>Presets</h2>
       <div class="rowf">
         <select id="presetSelect"></select>
         <button class="btn primary" id="presetApply">Apply</button>
@@ -148,14 +155,14 @@
     </div>
 
     <div class="card" id="fnCard">
-      <h2>Time remapping<small>· u (adds delay) and α (pulls it back)</small></h2>
-      <div class="desc" style="margin-top:0">Start: <b id="trigHint">–</b> <span class="muted">(when = <code id="trigText">–</code>)</span>.
-        <b>u</b> adds delay (0 = real time · 0.8 = 5× slower · 1 = freeze · &gt;1 = rewind);
-        <b>α</b> pulls it back (catch-up ≈ 3/α seconds).</div>
+      <h2>Time remapping<span class="tip" tabindex="0" data-tip="u adds delay: 0 = real time, 1 = freeze, above 1 = rewind.&#10;α pulls it back to the present: catching up takes about 3/α seconds.">?</span></h2>
+      <div class="desc" style="margin-top:0">Start: <b id="trigHint">–</b></div>
       <div class="group" id="basicParams" style="margin-top:10px"></div>
 
       <details class="advanced" id="advanced">
-        <summary>Advanced: formulas, self-defined variables and drawn shapes</summary>
+        <summary>Advanced</summary>
+
+        <h3>Formulas<span class="tip" tabindex="0" data-tip="The sliders above are uon, aon and aoff.&#10;c ? a : b gives a when c is true.&#10;Press Enter to apply a formula, Esc to undo your edit.">?</span></h3>
 
         <div class="fx"><label for="fxWhen" title="Trigger condition. While true: on = 1, ton counts up.">when</label><input type="text" id="fxWhen" class="code" spellcheck="false" autocomplete="off"></div>
         <div class="fxerr" id="errWhen"></div>
@@ -163,45 +170,39 @@
         <div class="fxerr" id="errU"></div>
         <div class="fx"><label for="fxAlpha" title="Recovery: how strongly the delay is pulled back (catch-up ≈ 3/α seconds)">α =</label><input type="text" id="fxAlpha" class="code" spellcheck="false" autocomplete="off"></div>
         <div class="fxerr" id="errAlpha"></div>
-        <div class="desc">
-          The sliders above are <code>uon</code>, <code>aon</code>, <code>aoff</code> in the formulas.
-          <code>c ? a : b</code> picks a when c is true. Press <b>Enter</b> to apply a formula.
-        </div>
 
         <div class="varhead">
-          <h3>Self-defined variables<small>· k1, k2, k3: a number or a formula that when, u and α can use</small></h3>
+          <h3>Self-defined variables<span class="tip" tabindex="0" data-tip="k1, k2, k3: a number or a formula that when, u and α can use.&#10;k2 can use k1; k3 can use k1 and k2.">?</span></h3>
           <label class="switch" title="Show k1, k2 and k3"><input type="checkbox" id="varsOn"><span></span></label>
         </div>
-        <div class="desc" id="varsNote"></div>
         <div id="varFields">
-          <div class="fx"><label for="fxK1">k1 =</label><input type="text" id="fxK1" class="code" spellcheck="false" autocomplete="off"></div>
-          <div class="fxname" id="nameK1"></div><div class="fxerr" id="errK1"></div>
-          <div class="fx"><label for="fxK2" title="Can use k1">k2 =</label><input type="text" id="fxK2" class="code" spellcheck="false" autocomplete="off"></div>
-          <div class="fxname" id="nameK2"></div><div class="fxerr" id="errK2"></div>
-          <div class="fx"><label for="fxK3" title="Can use k1 and k2">k3 =</label><input type="text" id="fxK3" class="code" spellcheck="false" autocomplete="off"></div>
-          <div class="fxname" id="nameK3"></div><div class="fxerr" id="errK3"></div>
+          <div class="fx"><label for="fxK1">k1 =</label><input type="text" id="fxK1" class="code" spellcheck="false" autocomplete="off"><span class="fxname" id="nameK1"></span></div>
+          <div class="fxerr" id="errK1"></div>
+          <div class="fx"><label for="fxK2" title="Can use k1">k2 =</label><input type="text" id="fxK2" class="code" spellcheck="false" autocomplete="off"><span class="fxname" id="nameK2"></span></div>
+          <div class="fxerr" id="errK2"></div>
+          <div class="fx"><label for="fxK3" title="Can use k1 and k2">k3 =</label><input type="text" id="fxK3" class="code" spellcheck="false" autocomplete="off"><span class="fxname" id="nameK3"></span></div>
+          <div class="fxerr" id="errK3"></div>
         </div>
 
-        <h3>Drawn shapes<small>· drag points · double-click to add or remove</small></h3>
+        <h3>Drawn shapes<span class="tip" tabindex="0" data-tip="Drag points; double-click to add or remove one.&#10;In formulas: c1(x) and c2(x).">?</span></h3>
         <div id="curves"></div>
 
         <details class="vars"><summary>Variables and functions you can use</summary>
           <table id="varTable"></table>
-          <div class="desc" id="fnList"></div>
+          <div class="desc" id="fnList" style="white-space:pre-line"></div>
         </details>
       </details>
     </div>
 
     <div class="card">
-      <h2>Actions</h2>
+      <h2>Actions<span class="tip" tabindex="0" data-tip="Keys: Space = hold, P = tap, L = back to present.">?</span></h2>
       <div class="rowf">
         <button class="btn" data-action="live" title="Catch up to the present now (L)">Back to present</button>
         <button class="btn" data-action="trigger" title="Sets 'tap' to 0, for formulas that react to it (P / A button)">Tap</button>
         <button class="btn" data-action="moveWater" id="moveWater" title="Place the water block in front of the wearer">Move water in front</button>
         <button class="btn" data-action="resetKnobs" title="Put the u and α sliders back to the preset's values">Reset values</button>
       </div>
-      <div style="margin-top:10px"><button class="btn hold" id="hold">Hold (or hold Space): drives 'hold' in the formulas</button></div>
-      <div class="muted" style="margin-top:6px; font-size:12px">Keys: Space = hold · P = tap · L = back to present</div>
+      <div style="margin-top:10px"><button class="btn hold" id="hold">Hold</button></div>
     </div>
 
     <div id="tunables" class="col"></div>
@@ -219,18 +220,18 @@
     </div>
 
     <div class="card">
-      <h2>Last 10 seconds</h2>
+      <h2>Last 10 seconds<span class="tip" tabindex="0" data-tip="Left axis: delay, 0 to the buffer budget.&#10;Right axis: rate, −1 to 4×.">?</span></h2>
       <canvas id="chart"></canvas>
       <div class="legend">
-        <span><i style="background:var(--cool)"></i>delay δ (left axis, 0 … budget)</span>
-        <span><i style="background:var(--warm)"></i>rate r (right axis, −1 … 4)</span>
+        <span><i style="background:var(--cool)"></i>delay δ</span>
+        <span><i style="background:var(--warm)"></i>rate r</span>
         <span><i style="background:var(--violet)"></i>u</span>
         <span><i style="background:#ffffff55"></i>r = 1</span>
       </div>
     </div>
 
     <div class="card">
-      <h2>Inputs</h2>
+      <h2>Inputs<span class="tip" tabindex="0" data-tip="Bold hand: the one driving motion effects.&#10;Grey bar: outside the cameras' view, so ignored.">?</span></h2>
       <div class="bars">
         <span>hold</span><div class="bar"><div id="bHold"></div></div><span class="num" id="nHold">0</span>
         <span>remote hold</span><div class="bar"><div id="bRemote"></div></div><span class="num" id="nRemote">0</span>
@@ -239,17 +240,18 @@
         <span>buffer used</span><div class="bar"><div id="bBuffer" style="background:var(--violet)"></div></div><span class="num" id="nBuffer">0</span>
       </div>
       <div class="muted" style="margin-top:8px" id="flags"></div>
-      <div class="muted" style="margin-top:4px; font-size:12px">Hand bars: bold = the hand driving motion effects · grey = outside the cameras' view (ignored).</div>
     </div>
 
     <div class="card"><h2>Diagnostics</h2><pre id="diag" style="margin:0; white-space:pre-wrap; font-size:12px; color:var(--muted)"></pre></div>
-    <div class="card"><h2>Messages<small>· what happened, newest first (read-only)</small></h2><div id="log"></div></div>
+    <div class="card"><h2>Messages</h2><div id="log"></div></div>
   </section>
 </main>
 
 <script>
 (() => {
   const $ = id => document.getElementById(id);
+  // A "?" whose detail shows on hover / tap.
+  const tip = text => { const t = document.createElement('span'); t.className = 'tip'; t.tabIndex = 0; t.dataset.tip = text; t.textContent = '?'; return t; };
   const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
                   set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage unavailable */ } } };
 
@@ -288,6 +290,11 @@
   }
   let lastPolicy = null, lastPreset = null;
 
+  // The headset's address stays hidden until asked for (it would show up in demos and screen recordings).
+  $('remoteShow').onclick = () => {
+    const u = $('remoteUrl'); u.hidden = !u.hidden;
+    $('remoteShow').textContent = u.hidden ? 'phone remote' : 'hide';
+  };
   $('pinForm').addEventListener('submit', e => { e.preventDefault(); store.set('rt.pin', $('pin').value); hello(); });
 
   // Throttle parameter changes to ~30 Hz per control.
@@ -343,10 +350,10 @@
       setFormula('fxWhen', fn.when); setFormula('fxU', fn.u); setFormula('fxAlpha', fn.alpha);
       for (let k = 1; k <= 3; k++) {
         setFormula('fxK' + k, (fn.vars || [])[k - 1]);
-        $('nameK' + k).textContent = (fn.varNames || [])[k - 1] || '';
+        const nm = (fn.varNames || [])[k - 1] || '';
+        $('nameK' + k).textContent = nm; $('nameK' + k).title = nm;
       }
       showVars();
-      $('trigText').textContent = fn.when || '–';
       $('trigHint').textContent = fn.triggerHint || '–';
       $('moveWater').style.display = fn.usesWater ? '' : 'none';
       const table = $('varTable'); table.innerHTML = '';
@@ -357,7 +364,7 @@
         table.appendChild(tr);
       });
       $('fnList').textContent = 'Functions: ' + (fn.functions || []).map(f => f + '()').join(', ') +
-        ' · operators: + − * / % ^, < <= > >= == !=, && || !, c ? a : b · constants: pi.';
+        '\nOperators: + − * / % ^, < <= > >= == !=, && || !, c ? a : b\nConstants: pi';
     }
     if (hasFn) buildCurves(fn.curves || [], isOp);
     buildTunables(m.tunables, isOp);
@@ -367,15 +374,15 @@
   const curves = {};   // name -> { info, xs, ys, canvas, drag, lastSend, isOp }
   // How each drawn curve is presented, and the formula that puts it to use.
   const SHAPES = {
-    c1: { title: 'u(t)', axis: 'x = seconds since triggered', clock: 'on', use: { id: 'u', name: 'on ? c1(ton) : 0' } },
-    c2: { title: 'α(t)', axis: 'x = seconds since released', clock: 'off', use: { id: 'alpha', name: 'on ? aon : c2(toff)' } },
+    c1: { title: 'u(t)', axis: 'x: seconds since triggered', clock: 'on', use: { id: 'u', name: 'on ? c1(ton) : 0' } },
+    c2: { title: 'α(t)', axis: 'x: seconds since released', clock: 'off', use: { id: 'alpha', name: 'on ? aon : c2(toff)' } },
   };
   function buildCurves(list, isOp) {
     for (const info of list) {
       let c = curves[info.name];
       if (!c) {
         const wrap = document.createElement('div'); wrap.className = 'curve';
-        wrap.innerHTML = '<div class="head"><span><b></b> <span class="lbl"></span></span><span class="use"></span></div><canvas></canvas>';
+        wrap.innerHTML = '<div class="head"><span class="lbl"><b></b></span><span class="use"></span></div><canvas></canvas>';
         $('curves').appendChild(wrap);
         c = curves[info.name] = { wrap, canvas: wrap.querySelector('canvas'), drag: -1, lastSend: 0 };
         attachCurveEvents(info.name);
@@ -383,7 +390,8 @@
       c.info = info; c.isOp = isOp;
       const meta = SHAPES[info.name] || { title: info.name, axis: '', use: null };
       c.wrap.querySelector('b').textContent = meta.title;
-      c.wrap.querySelector('.lbl').textContent = `· ${meta.axis} · ${info.name}(x) in formulas`;
+      const lbl = c.wrap.querySelector('.lbl'), oldTip = lbl.querySelector('.tip'); if (oldTip) oldTip.remove();
+      lbl.appendChild(tip(`${meta.axis[0].toUpperCase()}${meta.axis.slice(1)}.\n${info.name}(x) in formulas.`));
       const use = c.wrap.querySelector('.use'); use.innerHTML = '';
       const b = document.createElement('button'); b.className = 'btn'; b.disabled = !isOp;
       if (info.used) {
@@ -552,8 +560,6 @@
     const on = pref === '1' || (pref === null && used.length > 0);
     $('varsOn').checked = on;
     $('varFields').style.display = on ? '' : 'none';
-    $('varsNote').textContent = !on && used.length ? `Hidden, but the formulas use ${used.join(' and ')}.` : '';
-    $('varsNote').style.display = $('varsNote').textContent ? '' : 'none';
   }
   $('varsOn').addEventListener('change', () => { store.set('rt.vars', $('varsOn').checked ? '1' : '0'); showVars(); });
 
@@ -585,7 +591,7 @@
       const card = document.createElement('div'); card.className = 'card';
       card.innerHTML = `<h2></h2><div class="group"></div>`;
       card.querySelector('h2').textContent = title;
-      if (sub) { const s = document.createElement('small'); s.textContent = '· ' + sub; card.querySelector('h2').appendChild(s); }
+      if (sub) card.querySelector('h2').appendChild(tip(sub[0].toUpperCase() + sub.slice(1) + '.'));
       const box = card.querySelector('.group');
       for (const t of groups[g]) box.appendChild(makeControl(t, isOp));
       delete groups[g];
@@ -602,14 +608,9 @@
   function makeControl(t, isOp) {
     const el = document.createElement('div'); el.className = 'param' + (t.unused ? ' unused' : '');
     const name = document.createElement('div'); name.className = 'name';
-    name.textContent = t.label; name.title = (t.help ? t.help + '\n' : '') + 'Double-click to reset to default.';
+    name.textContent = t.label;
     name.ondblclick = e => { if (isOp && e.target.tagName !== 'INPUT') { setParam(t.id, t.def); controls[t.id].update(t.def, true); } };
-    if (t.help) { const s = document.createElement('small'); s.textContent = t.help; name.appendChild(s); }
-    if (t.unused) {
-      const s = document.createElement('small'); s.className = 'note';
-      s.textContent = `not used by the current formulas (they don't read ${t.id.replace(/^fn\./, '')})`;
-      name.appendChild(s);
-    }
+    if (t.help) name.appendChild(tip(t.help));
     el.appendChild(name);
 
     const isToggle = t.options && t.options.length === 2 && t.options[0] === 'Off' && t.options[1] === 'On';

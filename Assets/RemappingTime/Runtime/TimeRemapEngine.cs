@@ -109,9 +109,9 @@ namespace RemappingTime
             RebuildPresetChoice();
 
             _softBudget = EngineParams.Add(Tunable.Toggle("engine.softBudget", "Soft buffer limit", true,
-                "Ease slow motion into a steady lag as the delay nears the buffer budget, not a hard stop."));
+                "Ease into a steady lag near the end of the buffer instead of stopping hard."));
             _galleryToggle = EngineParams.Add(Tunable.Toggle("engine.gallery", "Timeline gallery", false,
-                "Show several presets side by side on floating screens, all reacting to the same input."));
+                "Several presets side by side, reacting to the same input."));
             _galleryToggle.Changed += t => SetGallery(t.On);
 
             Main = new RemapChannel("main", _policies[0]);

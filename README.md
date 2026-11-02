@@ -127,7 +127,9 @@ Unity -batchmode -projectPath . -buildTarget Android -executeMethod RemappingTim
 2. Allow the **camera** permission (needed) and the **spatial data** permission (needed only for depth reprojection).
 3. Put the headset, and the laptop or phone you want to control it from, on the same Wi-Fi network.
 4. The HUD shows the control address, e.g. `http://192.168.1.23:8080/`. Open `…/operator` on a laptop for the
-   full control panel, or the plain address on a phone for a simple hold button.
+   full control panel, or the plain address on a phone for a simple hold button. Once a browser is connected, the
+   address leaves the HUD so it stays out of demos and recordings (press Y for the full HUD to see it again; on the
+   operator page, *phone remote* in the top bar reveals it).
 5. Try *Hold to slow*: hold the right index trigger (or Space on the web page) to slow the world, then release it
    and the world fast-forwards back to the present. Then work through the other presets on the operator page.
 

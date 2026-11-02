@@ -117,11 +117,11 @@ namespace RemappingTime
             Curve1.Changed += () => ExpressionsChanged?.Invoke();
             Curve2.Changed += () => ExpressionsChanged?.Invoke();
             UWhenOn = Range("uon", "u when triggered", 0f, 2f, 0.8f, 0.01f, "",
-                "How fast delay builds while triggered: 0.8 = five times slower, 1 = freeze, above 1 = rewind.");
+                "Delay added while triggered. 1 = freeze, above 1 = rewind.");
             AlphaWhenOn = Range("aon", "α when triggered", 0f, 20f, 0.05f, 0.01f, "",
-                "How strongly time is pulled back toward real time while triggered. Small = the slowdown lasts.");
+                "Pull back toward the present while triggered.");
             AlphaWhenOff = Range("aoff", "α when released", 0f, 20f, 5f, 0.05f, "",
-                "How fast it catches up after release: catch-up takes about 3/α seconds (5 ≈ 0.6 s).");
+                "Pull back after release. Catching up takes about 3/α seconds.");
             foreach (Tunable t in new[] { UWhenOn, AlphaWhenOn, AlphaWhenOff }) t.Group = BasicGroup;
             for (int i = 0; i < 3; i++) Expression.TryCompile(DefaultVariable, Variables, out _k[i], out _);
             SetExpressions("hold", "on ? uon : 0", "on ? aon : aoff");

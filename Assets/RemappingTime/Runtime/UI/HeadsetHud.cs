@@ -70,13 +70,13 @@ namespace RemappingTime
         private void Awake()
         {
             _modeChoice = Params.Add(Tunable.Choice("hud.mode", "HUD mode", new[] { "Minimal", "Full", "Hidden" }, 0,
-                "Minimal = status line with the web address. Full = adds the thumbstick tuner and live graph. (Y cycles.)"));
+                "Y on the left controller cycles the modes."));
             _autoCollapse = Params.Add(Tunable.Range("hud.autoCollapse", "Full HUD auto-collapse", 0f, 30f, 8f, 1f, "s",
-                "When the HUD is Full, fall back to Minimal after this many seconds without thumbstick input (0 = never)."));
+                "Back to Minimal after this long without input (0 = never)."));
             _distance = Params.Add(Tunable.Range("hud.distance", "HUD distance", 0.3f, 1.2f, 0.5f, 0.05f, "m",
-                "Within arm's reach if you want to poke the Menu button."));
+                "Distance from your eyes."));
             _height = Params.Add(Tunable.Range("hud.height", "HUD height", -0.5f, 0.2f, -0.2f, 0.02f, "m",
-                "Vertical offset from eye level (negative = below)."));
+                "Offset from eye level (negative = below)."));
 
             // Placement changes apply right away (otherwise the panel only moves after a large head turn).
             _distance.Changed += _ => _recentering = true;
@@ -327,11 +327,12 @@ namespace RemappingTime
 
             if (!full)
             {
-                // Always show where to point a browser: this line is often the only HUD visible.
-                _sb.Append("\n<size=80%><color=#8fa3b8>")
-                   .Append(string.IsNullOrEmpty(engine.ControlUrl) ? "web off" : engine.ControlUrl + "operator")
-                   .Append(engine.WebClients > 0 ? $"   ({engine.WebClients} connected)" : "")
-                   .Append("</color></size>");
+                // Where to point a browser, until one connects: after that the address stays off the view (it
+                // would show up in demos and recordings). The full HUD (Y) always shows it.
+                if (engine.WebClients == 0)
+                    _sb.Append("\n<size=80%><color=#8fa3b8>")
+                       .Append(string.IsNullOrEmpty(engine.ControlUrl) ? "web off" : engine.ControlUrl + "operator")
+                       .Append("</color></size>");
                 return _sb.ToString();
             }
 
