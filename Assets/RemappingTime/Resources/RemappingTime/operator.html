@@ -764,7 +764,7 @@
     if (lastPolicy !== null && s.policy !== lastPolicy) log(`Policy → ${policyName(s.policy)}`);
     if (lastPreset !== null && s.preset !== lastPreset && s.preset) log(`Preset → ${s.preset}`);
     lastPolicy = s.policy; lastPreset = s.preset;
-    $('flags').textContent = [s.bypass ? 'BYPASS (comparing with live)' : '',
+    $('flags').textContent = [s.bypass ? 'Comparing: present and remapped side by side (left grip)' : '',
       s.status ? 'camera: ' + s.status : ''].filter(Boolean).join('  ·  ');
     $('diag').textContent = s.diag || '';
 

@@ -166,7 +166,7 @@ could not be seen there.
 | Thumbstick ←/→ | Change value (hold to accelerate) |
 | Thumbstick click | Reset to default |
 | X | Next main preset |
-| Grip button (side, middle finger): hold | **Bypass**: show the present (live) while held, for a before/after comparison |
+| Grip button (side, middle finger): hold | **Compare**: two screens side by side, the present and the remapped view; release to return to the remapped view (it keeps running meanwhile) |
 
 **Without a controller in hand:** hold **Space** on the operator page (or the big button on the phone page) instead of
 the trigger. In the Editor (play mode over Link): Space = hold, Enter = tap, Backspace = back to the present.
@@ -404,7 +404,7 @@ round could set when = `noise(t) > 0.8`, log when `Main.Phase == "on"`, and scor
 - **Lighting:** hand tracking needs decent light. For fast motions (*Hitstop punch*), the right controller is more
   reliable than a bare hand.
 - **Reset:** B snaps back to the present, as does *Back to present* on the operator page. Re-centre with the Meta button.
-- **Before and after:** hold the left grip (*Bypass*) to compare with the live view.
+- **Before and after:** hold the left grip (*Compare*) to see the present and the remapped view side by side.
 
 ## Known limitations
 

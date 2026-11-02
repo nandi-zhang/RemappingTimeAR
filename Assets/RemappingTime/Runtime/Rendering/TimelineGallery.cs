@@ -14,6 +14,7 @@ namespace RemappingTime
         private RemapChannel _channel;
         private readonly FrameQuad[] _quads = new FrameQuad[2];
         private TextMeshPro _label;
+        private string _title;
         private float _nextLabelUpdate;
 
         public RemapChannel Channel => _channel;
@@ -23,6 +24,7 @@ namespace RemappingTime
         {
             _capture = capture;
             _channel = channel;
+            _title = title;
             float h = width / Mathf.Max(0.1f, capture.Aspect);
             for (int e = 0; e < 2; e++)
             {
@@ -56,7 +58,7 @@ namespace RemappingTime
             if (Time.time >= _nextLabelUpdate)
             {
                 _nextLabelUpdate = Time.time + 0.1f;
-                _label.text = $"<b>{_channel.Name}</b>\n<size=70%>delay {_channel.Delay:F2}s   rate {_channel.Rate:F2}x   {_channel.Phase}</size>";
+                _label.text = $"<b>{_title}</b>\n<size=70%>delay {_channel.Delay:F2}s   rate {_channel.Rate:F2}x   {_channel.Phase}</size>";
             }
         }
 
@@ -88,8 +90,12 @@ namespace RemappingTime
         [SerializeField] private bool singlePassStereo = false;
 
         private readonly List<TimelineWindow> _windows = new List<TimelineWindow>();
+        private readonly HashSet<RemapChannel> _owned = new HashSet<RemapChannel>();
 
         public bool Visible => _windows.Count > 0;
+
+        /// <summary>True while showing the two-screen comparison (present | remapped) rather than presets.</summary>
+        public bool IsCompare { get; private set; }
         public IReadOnlyList<TimelineWindow> Windows => _windows;
 
         public void Show(PresetLibrary presets, Pose head)
@@ -101,7 +107,6 @@ namespace RemappingTime
             if (fwd.sqrMagnitude < 1e-4f) fwd = Vector3.forward;
             fwd.Normalize();
 
-            int left = LayerMask.NameToLayer(leftEyeLayer), right = LayerMask.NameToLayer(rightEyeLayer);
             int n = presetNames.Length;
             for (int i = 0; i < n; i++)
             {
@@ -109,30 +114,59 @@ namespace RemappingTime
                 RemapPolicy policy = PolicyCatalog.Create(preset != null ? preset.policy : "live");
                 if (preset != null) PresetLibrary.ApplyToPolicy(preset, policy);
                 var channel = new RemapChannel(preset != null ? preset.name : presetNames[i], policy);
-
-                float angle = (i - (n - 1) * 0.5f) * angleStep;
-                Vector3 dir = Quaternion.AngleAxis(angle, Vector3.up) * fwd;
-                var go = new GameObject($"Timeline {channel.Name}");
-                go.transform.SetParent(transform, false);
-                go.transform.position = head.position + dir * distance + Vector3.up * verticalOffset;
-                go.transform.rotation = Quaternion.LookRotation(dir, Vector3.up);
-
-                var window = go.AddComponent<TimelineWindow>();
-                window.Init(capture, channel, frameShader, windowWidth, left, right, singlePassStereo, channel.Name);
-                _windows.Add(window);
+                _owned.Add(channel);
+                Place(channel, channel.Name, i, n, head, fwd);
             }
+        }
+
+        /// <summary>
+        /// Two screens side by side: the present, and <paramref name="remapped"/> (the running main channel, shown
+        /// as is, not a copy). Used while comparing (left grip).
+        /// </summary>
+        public void ShowCompare(RemapChannel remapped, Pose head)
+        {
+            Hide();
+            if (capture == null || !capture.IsReady) return;
+            Vector3 fwd = Vector3.ProjectOnPlane(head.rotation * Vector3.forward, Vector3.up);
+            if (fwd.sqrMagnitude < 1e-4f) fwd = Vector3.forward;
+            fwd.Normalize();
+
+            var live = new FunctionPolicy();
+            live.SetExpressions("0", "0", "5");
+            var present = new RemapChannel("Present", live);
+            _owned.Add(present);
+            Place(present, "Present", 0, 2, head, fwd);
+            Place(remapped, "Remapped", 1, 2, head, fwd);
+            IsCompare = true;
+        }
+
+        private void Place(RemapChannel channel, string title, int i, int n, Pose head, Vector3 fwd)
+        {
+            int left = LayerMask.NameToLayer(leftEyeLayer), right = LayerMask.NameToLayer(rightEyeLayer);
+            float angle = (i - (n - 1) * 0.5f) * angleStep;
+            Vector3 dir = Quaternion.AngleAxis(angle, Vector3.up) * fwd;
+            var go = new GameObject($"Timeline {title}");
+            go.transform.SetParent(transform, false);
+            go.transform.position = head.position + dir * distance + Vector3.up * verticalOffset;
+            go.transform.rotation = Quaternion.LookRotation(dir, Vector3.up);
+
+            var window = go.AddComponent<TimelineWindow>();
+            window.Init(capture, channel, frameShader, windowWidth, left, right, singlePassStereo, title);
+            _windows.Add(window);
         }
 
         public void Hide()
         {
             foreach (TimelineWindow w in _windows) if (w != null) Destroy(w.gameObject);
             _windows.Clear();
+            _owned.Clear();
+            IsCompare = false;
         }
 
-        /// <summary>Advances every gallery channel with the shared context (called by the engine).</summary>
+        /// <summary>Advances the gallery's own channels with the shared context (called by the engine).</summary>
         public void Step(in RemapContext ctx)
         {
-            foreach (TimelineWindow w in _windows) w.Channel.Step(ctx);
+            foreach (TimelineWindow w in _windows) if (_owned.Contains(w.Channel)) w.Channel.Step(ctx);
         }
     }
 }

@@ -145,7 +145,8 @@ namespace RemappingTime
 
             UpdatePresence();
             bool echoOn = _echo.On;
-            bool visible = _presence > 0.001f || echoOn;
+            bool comparing = Channel.ShowingLive;
+            bool visible = _presence > 0.001f || (echoOn && !comparing);
 
             if (!capture.Buffer.TrySample(Channel.DisplayTime, out FrameSample sample) || !visible)
             {
@@ -154,7 +155,7 @@ namespace RemappingTime
             }
 
             ComputeRateCues(out Color tint, out float tintAmount, out float desat, out float glow);
-            float opacity = _opacity.Value * (echoOn ? 1f : _presence);
+            float opacity = _opacity.Value * (echoOn && !comparing ? 1f : _presence);
             float aspect = capture.Aspect;
             float distance = _distance.Value;
 
@@ -231,12 +232,14 @@ namespace RemappingTime
         private void UpdatePresence()
         {
             float target = 1f;
-            if (_hideLive.On)
+            if (Channel.ShowingLive) target = 0f; // comparing with the present: reveal the live passthrough
+            else if (_hideLive.On)
             {
                 bool remapped = Channel.Delay > 0.012 || Mathf.Abs(Channel.Rate - 1f) > 0.03f;
                 target = remapped ? 1f : 0f;
             }
-            float tau = target > _presence ? 0.06f : 0.25f; // appear fast, disappear gently
+            // Appear fast, disappear gently, except when comparing, which should switch at once both ways.
+            float tau = target > _presence || Channel.ShowingLive ? 0.06f : 0.25f;
             _presence = Mathf.MoveTowards(_presence, target, Time.deltaTime / tau);
         }
 

@@ -15,7 +15,7 @@ namespace RemappingTime
     /// <item>Left stick up/down: select a parameter. Left/right: change it (hold to accelerate)</item>
     /// <item>Left stick click: reset the selected parameter to its default</item>
     /// <item>X: next preset (main list; advanced presets are in the Preset entry and on the web page)</item>
-    /// <item>Left grip (hold): bypass, i.e. compare with live (handled by <see cref="InputHub"/>)</item>
+    /// <item>Left grip (hold): compare with the present (handled by <see cref="InputHub"/>)</item>
     /// </list>
     ///
     /// <para>Design choices to keep tuning from spoiling the experience: the panel is world-anchored low
@@ -314,7 +314,7 @@ namespace RemappingTime
             _sb.Append("<b>").Append(Clean(engine.ActivePolicy?.DisplayName)).Append("</b>");
             if (!string.IsNullOrEmpty(engine.ActivePresetName))
                 _sb.Append("  <color=#8fa3b8>").Append(Clean(engine.ActivePresetName)).Append("</color>");
-            if (engine.Inputs != null && engine.Inputs.Bypass) _sb.Append("  <color=#ffd54a><b>BYPASS</b></color>");
+            if (engine.Inputs != null && engine.Inputs.Bypass) _sb.Append("  <color=#ffd54a><b>comparing</b></color>");
             // How to start the remapping in this preset (e.g. "hold the right trigger").
             if (engine.ActivePolicy is FunctionPolicy fn)
                 _sb.Append("\n<size=85%><color=#ffd54a>start: ").Append(Clean(fn.TriggerHint)).Append("</color></size>");

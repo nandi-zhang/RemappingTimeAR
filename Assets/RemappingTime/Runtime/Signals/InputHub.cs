@@ -12,7 +12,7 @@ namespace RemappingTime
     /// <item>Right index trigger: hold (analog)</item>
     /// <item>A: action (e.g. fire a pulse or a freeze)</item>
     /// <item>B: snap back to the present</item>
-    /// <item>Left grip (hold): bypass, i.e. show live for a quick A/B comparison</item>
+    /// <item>Left grip (hold): compare, i.e. the present and the remapped view side by side</item>
     /// </list>
     /// In the Editor, the keyboard also works: Space = hold, Enter = action, Backspace = live.
     ///
@@ -31,7 +31,7 @@ namespace RemappingTime
         private bool _queuedAction, _queuedSnap;
 
         public RemapInputs Current { get; private set; }
-        /// <summary>True while the bypass (A/B compare) control is held.</summary>
+        /// <summary>True while the compare control (left grip) is held: show the present, remapping keeps running.</summary>
         public bool Bypass { get; private set; }
         public int ActiveRemoteClients => _remote.Count;
 

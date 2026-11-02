@@ -59,7 +59,10 @@ namespace RemappingTime
         /// </summary>
         public bool SuppressMotionSignals { get; set; }
 
-        /// <summary>When true, the main view shows live (an A/B "compare" request from UI or scripts).</summary>
+        /// <summary>
+        /// When true, the main view shows the present for an A/B comparison (from UIs or scripts), like holding the
+        /// left grip. The remapping keeps running, so it comes back where it would have been.
+        /// </summary>
         public bool CompareLive { get; set; }
 
         private readonly SortedDictionary<string, string> _diagnostics = new SortedDictionary<string, string>();
@@ -320,14 +323,23 @@ namespace RemappingTime
 
             UpdateZone(ref ctx);
 
-            // While the gallery is open the surroundings stay live, so the floating screens are the comparison.
-            bool galleryOpen = gallery != null && gallery.Visible;
+            // Comparing (left grip held): two screens, the present and the remapped view, while the surroundings
+            // show the present and the remapping keeps running. Not while the preset gallery is open.
+            bool comparing = (input != null && input.Bypass) || CompareLive;
+            if (gallery != null && !_galleryToggle.On)
+            {
+                if (comparing && !gallery.Visible) gallery.ShowCompare(Main, HeadPose());
+                else if (!comparing && gallery.IsCompare) gallery.Hide();
+            }
+
+            // While the preset gallery is open the surroundings stay live, so the floating screens are the comparison.
+            bool galleryOpen = gallery != null && gallery.Visible && !gallery.IsCompare;
             Main.SoftBudget = _softBudget.On;
-            Main.Step(ctx, (input != null && input.Bypass) || CompareLive || galleryOpen);
+            Main.Step(ctx, bypass: galleryOpen, showLive: comparing);
             ctx.Delay = Main.Delay;
             LastContext = ctx;
 
-            if (galleryOpen) gallery.Step(ctx);
+            if (gallery != null && gallery.Visible) gallery.Step(ctx);
         }
 
         // After the headset sleeps, the buffer holds frames from before; start from the present again.

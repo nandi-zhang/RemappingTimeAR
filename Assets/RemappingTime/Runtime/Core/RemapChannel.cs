@@ -29,6 +29,12 @@ namespace RemappingTime
         public string Phase { get; private set; } = "live";
 
         /// <summary>
+        /// True while the view should show the present for an A/B comparison. The remapping keeps running unseen,
+        /// so the remapped view comes back exactly where it would have been.
+        /// </summary>
+        public bool ShowingLive { get; private set; }
+
+        /// <summary>
         /// When on, injection fades out as δ approaches the buffer budget, so slow motion eases into a
         /// steady lag rather than hitting a hard wall. Without this, holding slow motion past
         /// B / (1 − speed) seconds silently turns into plain delay.
@@ -53,9 +59,11 @@ namespace RemappingTime
         }
 
         /// <param name="ctx">Shared context for this frame; <see cref="RemapContext.Delay"/> is filled in here.</param>
-        /// <param name="bypass">Force live (used for quick A/B comparison against real time).</param>
-        public void Step(RemapContext ctx, bool bypass = false)
+        /// <param name="bypass">Catch up to the present and stay there (e.g. while the gallery is open).</param>
+        /// <param name="showLive">Show the present while the remapping keeps going unseen (A/B comparison).</param>
+        public void Step(RemapContext ctx, bool bypass = false, bool showLive = false)
         {
+            ShowingLive = showLive;
             Dynamics.MaxDelay = Mathf.Max(0f, ctx.MaxDelay);
             ctx.Delay = Dynamics.Delay;
 
