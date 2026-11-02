@@ -29,9 +29,9 @@ response to events**. That is what a *policy* does.
 
 ---
 
-## Features
+## Example features
 
-Recorded through the headset. Click a clip for the full-quality video.
+Recorded through the headset. The examples below are just a few. More are available in the app, and you can configure your own effects too!
 
 <table>
 <tr>
