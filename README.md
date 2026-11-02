@@ -20,8 +20,10 @@ behind reality (or ahead of reality when it's < 0). It evolves as
 dδ/dt = u(t) − α(t)·δ(t)        displayed time  s(t) = t − δ(t)        playback rate  r = 1 − u + α·δ
 ```
 
-**u** (injection) adds delay; **α** (recovery) pulls it back to zero. `u = 0.8, α ≈ 0` gives 5× slow motion,
-`u = 1` freezes, `u > 1` rewinds, and a large α after a slowdown fast-forwards back to live. Constant u and α
+**u** (the remap force) pushes the displayed time into the past; **α** (the resume force) pulls it back to the
+present. Each second, time moves on by 1 s while u pushes the view back by u s, so the view plays at rate 1 − u (with
+α ≈ 0): `u = 0.8` gives 5× slow motion, at `u = 1` the two cancel and the view freezes, and with `u > 1` the push wins
+and the view rewinds. A large α after a slowdown fast-forwards back to live. Constant u and α
 only settle into a constant lag (δ → u/α, r → 1), so interesting effects come from **switching u and α in
 response to events**. That is what a *policy* does.
 

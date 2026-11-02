@@ -168,12 +168,12 @@
     </div>
 
     <div class="card" id="fnCard">
-      <h2>Time remapping<span class="tip" tabindex="0" data-tip="u adds delay: 0 = real time, 1 = freeze, above 1 = rewind.&#10;α pulls it back to the present: catching up takes about 3/α seconds.">?</span></h2>
+      <h2>Time remapping<span class="tip" tabindex="0" data-tip="Each second, time moves on by 1 s and u pushes the view back by u s.&#10;u below 1: slower. u = 1: the two cancel, so it freezes. Above 1: the push wins, so it rewinds.&#10;α pulls the view back to the present: catching up takes about 3/α seconds.">?</span></h2>
       <div class="eq"><span class="ov">δ</span> = u − α δ</div>
       <div class="eqkey">
         <i>δ</i><span>gap between the displayed time and the present</span>
-        <i>u</i><span>remap force</span>
-        <i>α</i><span>resume force</span>
+        <i>u</i><span>remap force, pushing the displayed time into the past</span>
+        <i>α</i><span>resume force, pulling it back to the present</span>
       </div>
       <div class="desc" style="margin-top:0">Start: <b id="trigHint">–</b></div>
       <div class="group" id="basicParams" style="margin-top:10px"></div>
