@@ -257,15 +257,11 @@ namespace RemappingTime
             yield return RemapPreset.Fn("Hold to slow", "Hold the trigger (or Space) to slow time; release to fast-forward back.",
                 "hold", slowU, slowA, none, U(0.8f), AOn(0.05f), AOff(5f));
 
-            // Discontinuous counterexamples, right after Hold to slow for comparison. δ settles at u/α, and a huge α
+            // A discontinuous counterexample, right after Hold to slow for comparison. δ settles at u/α, and a huge α
             // gets it there within one frame, so u = 1000·D, α = 1000 cuts the view straight to D seconds ago: a jump,
-            // with no slowdown or rewind between.
+            // with no slowdown or rewind between (Jump cuts, among the advanced presets, uses the same idea).
             yield return RemapPreset.Fn("Cut back", "A counterexample: hold to cut k1 seconds into the past, release to cut back to the present. Try it to feel what it is like when your reality gets cut, and why the model keeps it continuous.",
                 "hold", "on ? 1000 * k1 : 0", "1000", new[] { ("cut back seconds", 1.5f) });
-
-            yield return RemapPreset.Fn("Jump cuts", "A counterexample: every k1 seconds the view cuts to a random moment up to k2 seconds ago, like a film edit of your surroundings. Try it to feel what it is like when your reality gets cut, and why the model keeps it continuous.",
-                "1", "1000 * k2 * noise(floor(t / k1))", "1000", new[] { ("shot length seconds", 1.2f), ("longest cut back seconds", 1.5f) });
-
             yield return RemapPreset.Fn("Echo trails", "Hold to slow, with earlier moments trailing behind moving things.",
                 "hold", slowU, slowA, none, U(0.8f), AOn(0.05f), AOff(5f),
                 ("view.echo", 1), ("view.echoCount", 4), ("view.echoSpacing", 0.07f), ("view.echoStrength", 0.5f));
@@ -297,6 +293,9 @@ namespace RemappingTime
                 U(0.95f), AOn(0.6f), AOff(3f), ("view.distance", 0.6f), ("water.look", 1));
 
             // Advanced presets: more specialised designs, most with self-defined variables to tune.
+
+            yield return RemapPreset.Fn("Jump cuts", "A counterexample: every k1 seconds the view cuts to a random moment up to k2 seconds ago, like a film edit of your surroundings. Try it to feel what it is like when your reality gets cut, and why the model keeps it continuous.",
+                "1", "1000 * k2 * noise(floor(t / k1))", "1000", new[] { ("shot length seconds", 1.2f), ("longest cut back seconds", 1.5f) }).AsAdvanced();
 
             // Analog option: a half-pressed trigger (or the web strength slider) gives half the slowdown.
             yield return RemapPreset.Fn("Hold to slow (analog)", "Squeeze the trigger harder for slower time; release to fast-forward back.",

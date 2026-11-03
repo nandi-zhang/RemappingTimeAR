@@ -225,14 +225,13 @@ switches the formula over to the shape, and clicking it again puts back the form
 u = `on ? c1(ton) : 0`, α = `on ? aon : c2(toff)`. Shapes are saved with presets.
 
 Presets come in two lists. The **main presets** are the most representative designs (the headset's X button steps
-through them), with the two *cut* counterexamples right after *Hold to slow* for comparison:
+through them), with the *Cut back* counterexample right after *Hold to slow* for comparison:
 
 | Preset | Start | when | u = | α = |
 |---|---|---|---|---|
 | Live | never | `0` | `0` | `aoff` |
 | Hold to slow | trigger | `hold` | `on ? uon : 0` | `on ? aon : aoff` |
 | Cut back | trigger | `hold` | `on ? 1000 * k1 : 0` | `1000` |
-| Jump cuts | always on | `1` | `1000 * k2 * noise(floor(t / k1))` | `1000` |
 | Echo trails · Time lens · Ghost | trigger | `hold` | `on ? uon : 0` | `on ? aon : aoff` (with a different representation) |
 | Motion slow-mo | fast hand | `speed > 0.6` | `on \|\| toff < 0.15 ? uon : 0` | `on \|\| toff < 0.15 ? aon : aoff` |
 | Time wobble | always on | `1` | `max(0, uon + 0.6 * sin(pi * t))` | `aon` |
@@ -243,6 +242,7 @@ through them), with the two *cut* counterexamples right after *Hold to slow* for
 
 | Preset | Start | when | u = | α = |
 |---|---|---|---|---|
+| Jump cuts | always on | `1` | `1000 * k2 * noise(floor(t / k1))` | `1000` |
 | Hold to slow (analog) | trigger | `hold > 0.05` | `on ? uon * hold : 0` | `on ? aon : aoff` |
 | Bullet time · Freeze frame · Rewind while held | trigger | `hold` | `on ? uon : 0` | `on ? aon : aoff` (u = 0.92, 1, 2) |
 | Gradual brake | trigger | `hold` | `on ? uon * smoothstep(0, k1, ton) : 0` | `on ? aon : aoff` |

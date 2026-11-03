@@ -261,11 +261,13 @@ namespace RemappingTime
                     Selected().ResetToDefault();
                     any = true;
                 }
-                if (OVRInput.GetDown(OVRInput.Button.One, L))
-                {
-                    engine.NextMainPreset();
-                    any = true;
-                }
+            }
+
+            // X steps through the main presets in every HUD mode, including hidden (e.g. during a demo).
+            if (OVRInput.GetDown(OVRInput.Button.One, L))
+            {
+                engine.NextMainPreset();
+                any = true;
             }
 
             _idleTime = any ? 0f : _idleTime + Time.unscaledDeltaTime;
