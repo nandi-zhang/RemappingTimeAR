@@ -20,7 +20,7 @@ namespace RemappingTime
         public RemapChannel Channel => _channel;
 
         public void Init(StereoPassthroughCapture capture, RemapChannel channel, Shader shader, float width,
-                         int leftLayer, int rightLayer, bool singlePassStereo, string title)
+                         int leftLayer, int rightLayer, bool singlePassStereo, string title, float textScale = 1f)
         {
             _capture = capture;
             _channel = channel;
@@ -40,7 +40,7 @@ namespace RemappingTime
 
             var labelGo = new GameObject("Label");
             labelGo.transform.SetParent(transform, false);
-            float scale = width / 0.52f; // labels grow with the screen (0.52 m = the gallery's size)
+            float scale = width / 0.52f * textScale; // labels grow with the screen (0.52 m = the gallery's size)
             labelGo.transform.localPosition = new Vector3(0, h / 2 + 0.035f * scale, 0);
             _label = labelGo.AddComponent<TextMeshPro>();
             _label.alignment = TextAlignmentOptions.Center;
@@ -90,6 +90,7 @@ namespace RemappingTime
         [SerializeField] private float compareDistance = 1.3f;
         [SerializeField] private float compareWidth = 0.9f;
         [SerializeField] private float compareAngleStep = 40f;
+        [SerializeField] private float compareTextScale = 1.5f;
         [SerializeField] private string leftEyeLayer = "LeftEye";
         [SerializeField] private string rightEyeLayer = "RightEye";
         [SerializeField] private bool singlePassStereo = false;
@@ -140,13 +141,13 @@ namespace RemappingTime
             live.SetExpressions("0", "0", "5");
             var present = new RemapChannel("Present", live);
             _owned.Add(present);
-            Place(present, "Present", 0, 2, head, fwd, compareDistance, compareWidth, compareAngleStep);
-            Place(remapped, "Remapped", 1, 2, head, fwd, compareDistance, compareWidth, compareAngleStep);
+            Place(present, "Present", 0, 2, head, fwd, compareDistance, compareWidth, compareAngleStep, compareTextScale);
+            Place(remapped, "Remapped", 1, 2, head, fwd, compareDistance, compareWidth, compareAngleStep, compareTextScale);
             IsCompare = true;
         }
 
         private void Place(RemapChannel channel, string title, int i, int n, Pose head, Vector3 fwd,
-                           float distance, float width, float angleStep)
+                           float distance, float width, float angleStep, float textScale = 1f)
         {
             int left = LayerMask.NameToLayer(leftEyeLayer), right = LayerMask.NameToLayer(rightEyeLayer);
             float angle = (i - (n - 1) * 0.5f) * angleStep;
@@ -157,7 +158,7 @@ namespace RemappingTime
             go.transform.rotation = Quaternion.LookRotation(dir, Vector3.up);
 
             var window = go.AddComponent<TimelineWindow>();
-            window.Init(capture, channel, frameShader, width, left, right, singlePassStereo, title);
+            window.Init(capture, channel, frameShader, width, left, right, singlePassStereo, title, textScale);
             _windows.Add(window);
         }
 

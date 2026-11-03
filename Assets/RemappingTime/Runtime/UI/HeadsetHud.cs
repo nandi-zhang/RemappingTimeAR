@@ -75,7 +75,7 @@ namespace RemappingTime
                 "Back to Minimal after this long without input (0 = never)."));
             _distance = Params.Add(Tunable.Range("hud.distance", "HUD distance", 0.3f, 1.2f, 0.5f, 0.05f, "m",
                 "Distance from your eyes."));
-            _height = Params.Add(Tunable.Range("hud.height", "HUD height", -0.5f, 0.2f, -0.2f, 0.02f, "m",
+            _height = Params.Add(Tunable.Range("hud.height", "HUD height", -0.5f, 0.2f, -0.1f, 0.02f, "m",
                 "Offset from eye level (negative = below)."));
 
             // Placement changes apply right away (otherwise the panel only moves after a large head turn).

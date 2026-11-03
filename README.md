@@ -240,6 +240,8 @@ Presets come in two lists. The **main presets** are the most representative desi
 
 | Preset | Start | when | u = | α = |
 |---|---|---|---|---|
+| Cut back | trigger | `hold` | `on ? 1000 * k1 : 0` | `1000` |
+| Jump cuts | always on | `1` | `1000 * k2 * noise(floor(t / k1))` | `1000` |
 | Hold to slow (analog) | trigger | `hold > 0.05` | `on ? uon * hold : 0` | `on ? aon : aoff` |
 | Bullet time · Freeze frame · Rewind while held | trigger | `hold` | `on ? uon : 0` | `on ? aon : aoff` (u = 0.92, 1, 2) |
 | Gradual brake | trigger | `hold` | `on ? uon * smoothstep(0, k1, ton) : 0` | `on ? aon : aoff` |
@@ -249,8 +251,6 @@ Presets come in two lists. The **main presets** are the most representative desi
 | Looping shape | always on | `1` | `c1(t % k1)` | `c1(t % k1) > 0.5 ? aon : aoff` |
 | Stutter | always on | `1` | `uon * step(0.7, sin(2 * pi * k1 * t))` | `aon` |
 | Drifting time | always on | `1` | `uon * noise(k1 * t)` | `aon` |
-| Cut back | trigger | `hold` | `on ? 1000 * k1 : 0` | `1000` |
-| Jump cuts | always on | `1` | `1000 * k2 * noise(floor(t / k1))` | `1000` |
 
 **Cuts (discontinuous counterexamples).** δ settles at u/α, and α sets how fast it gets there, so very large values
 jump the view instead of moving it continuously: u = `1000 * D`, α = `1000` cuts straight to D seconds ago, with no
