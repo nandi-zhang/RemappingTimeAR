@@ -9,7 +9,7 @@ namespace RemappingTime
     ///
     /// Default headset mapping (right controller = "time controls"; the left controller drives the HUD):
     /// <list type="bullet">
-    /// <item>Right index trigger: hold (analog)</item>
+    /// <item>Either index trigger: hold (analog; the one squeezed harder counts), so one hand is enough</item>
     /// <item>A: action (e.g. fire a pulse or a freeze)</item>
     /// <item>B: snap back to the present</item>
     /// <item>Left grip (hold): compare, i.e. the present and the remapped view side by side</item>
@@ -61,7 +61,8 @@ namespace RemappingTime
 
             if (localControllers)
             {
-                localHold = OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.RTouch);
+                localHold = Mathf.Max(OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.RTouch),
+                                      OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.LTouch));
                 action |= OVRInput.GetDown(OVRInput.Button.One, OVRInput.Controller.RTouch);
                 snap |= OVRInput.GetDown(OVRInput.Button.Two, OVRInput.Controller.RTouch);
                 bypass = OVRInput.Get(OVRInput.Axis1D.PrimaryHandTrigger, OVRInput.Controller.LTouch) > 0.6f;

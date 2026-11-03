@@ -43,7 +43,7 @@ namespace RemappingTime
             "time in seconds",
             "current delay δ: how far behind real time the view is (s)",
             "buffer budget: the largest possible delay (s)",
-            "hold input 0–1 (right trigger, Space on the web page, or a phone)",
+            "hold input 0–1 (either index trigger, Space on the web page, or a phone)",
             "speed of the fastest hand inside the cameras' view (m/s; 0 if none)",
             "left hand speed, inside the view (m/s)",
             "right hand speed, inside the view (m/s)",
@@ -181,14 +181,14 @@ namespace RemappingTime
 
         /// <summary>
         /// What starts the remapping, in plain words, derived from the 'when' formula (shown on the HUD and the
-        /// operator page): e.g. "hold the right trigger", "move a hand fast or press A", "always on".
+        /// operator page): e.g. "hold a trigger", "move a hand fast or press A", "always on".
         /// </summary>
         public string TriggerHint
         {
             get
             {
                 var ways = new List<string>();
-                if (WhenReads(Hold)) ways.Add("hold the right trigger");
+                if (WhenReads(Hold)) ways.Add("hold a trigger");
                 if (WhenReads(Speed) || WhenReads(LSpeed) || WhenReads(RSpeed)) ways.Add("move a hand fast");
                 if (WhenReads(Depth) || WhenReads(InZone)) ways.Add("put a hand in the water");
                 if (WhenReads(Tap)) ways.Add("press A");

@@ -315,7 +315,7 @@ namespace RemappingTime
             if (!string.IsNullOrEmpty(engine.ActivePresetName))
                 _sb.Append("  <color=#8fa3b8>").Append(Clean(engine.ActivePresetName)).Append("</color>");
             if (engine.Inputs != null && engine.Inputs.Bypass) _sb.Append("  <color=#ffd54a><b>comparing</b></color>");
-            // How to start the remapping in this preset (e.g. "hold the right trigger").
+            // How to start the remapping in this preset (e.g. "hold a trigger").
             if (engine.ActivePolicy is FunctionPolicy fn)
                 _sb.Append("\n<size=85%><color=#ffd54a>start: ").Append(Clean(fn.TriggerHint)).Append("</color></size>");
             _sb.Append('\n');

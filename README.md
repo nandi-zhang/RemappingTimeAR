@@ -35,7 +35,7 @@ Recorded through the headset. The examples below are just a few. More are availa
 
 <table>
 <tr>
-<td width="33%" valign="top"><a href="Media/hold_to_slow.mp4"><img src="Media/previews/hold_to_slow.webp" alt="Hold to slow" width="100%"></a><br><b>Hold to slow</b><br><sub>Hold the right trigger and the world plays 5× slower. Release it and the world fast-forwards back to the present.</sub></td>
+<td width="33%" valign="top"><a href="Media/hold_to_slow.mp4"><img src="Media/previews/hold_to_slow.webp" alt="Hold to slow" width="100%"></a><br><b>Hold to slow</b><br><sub>Hold a trigger and the world plays 5× slower. Release it and the world fast-forwards back to the present.</sub></td>
 <td width="33%" valign="top"><a href="Media/echo_trail.mp4"><img src="Media/previews/echo_trail.webp" alt="Echo trails" width="100%"></a><br><b>Echo trails</b><br><sub>Hold to slow, with earlier moments trailing behind moving things, like chronophotography.</sub></td>
 <td width="33%" valign="top"><a href="Media/ghost.mp4"><img src="Media/previews/ghost.webp" alt="Ghost" width="100%"></a><br><b>Ghost</b><br><sub>The slowed world appears as a translucent ghost over the live one.</sub></td>
 </tr>
@@ -132,14 +132,14 @@ Unity -batchmode -projectPath . -buildTarget Android -executeMethod RemappingTim
    full control panel, or the plain address on a phone for a simple hold button. Once a browser is connected, the
    address leaves the HUD so it stays out of demos and recordings (press Y for the full HUD to see it again; on the
    operator page, *phone remote* in the top bar reveals it).
-5. Try *Hold to slow*: hold the right index trigger (or Space on the web page) to slow the world, then release it
+5. Try *Hold to slow*: hold an index trigger on either controller (or Space on the web page) to slow the world, then release it
    and the world fast-forwards back to the present. Then work through the other presets on the operator page.
 
 ---
 
 ## Controls
 
-> **The right index trigger starts the remapping.** Hold it to slow (or freeze, or rewind) the world; release it
+> **An index trigger starts the remapping**, on either controller, so one hand is enough. Hold it to slow (or freeze, or rewind) the world; release it
 > and the world fast-forwards back to the present. This is how most presets work. A few presets start on their own instead:
 > *Motion slow-mo* reacts to fast hand motion, *Water* and *Honey* to a hand inside the volume, and *Time wobble* and
 > *Constant u, α* are always on. The HUD's yellow **start:** line always tells you what starts the current preset.
@@ -148,7 +148,7 @@ Unity -batchmode -projectPath . -buildTarget Android -executeMethod RemappingTim
 
 | Input | Action |
 |---|---|
-| **Index trigger** (front, index finger): hold | **Start the remapping**; release to return to the present. Squeezing harder matters only in *Hold to slow (analog)*. |
+| **Index trigger** (front, index finger): hold | **Start the remapping**; release to return to the present. The left index trigger does the same. Squeezing harder matters only in *Hold to slow (analog)*. |
 | A | **Tap**: a one-off event (`tap`), e.g. a manual freeze in *Hitstop punch* |
 | B | Snap back to the present (a very quick catch-up, about 0.2 s) |
 | Grip button (side, middle finger): hold | *Water / Honey only:* carry the water block to your right hand |
@@ -161,6 +161,7 @@ could not be seen there.
 
 | Input | Action |
 |---|---|
+| Index trigger: hold | **Start the remapping**, same as the right one (for one-handed use) |
 | Y | HUD: minimal (default) → hidden → full |
 | Thumbstick ↑/↓ | Select a setting (u and α sliders, effects, display, …) |
 | Thumbstick ←/→ | Change value (hold to accelerate) |
@@ -228,8 +229,8 @@ Presets come in two lists. The **main presets** are the most representative desi
 | Preset | Start | when | u = | α = |
 |---|---|---|---|---|
 | Live | never | `0` | `0` | `aoff` |
-| Hold to slow | right trigger | `hold` | `on ? uon : 0` | `on ? aon : aoff` |
-| Echo trails · Time lens · Ghost | right trigger | `hold` | `on ? uon : 0` | `on ? aon : aoff` (with a different representation) |
+| Hold to slow | trigger | `hold` | `on ? uon : 0` | `on ? aon : aoff` |
+| Echo trails · Time lens · Ghost | trigger | `hold` | `on ? uon : 0` | `on ? aon : aoff` (with a different representation) |
 | Motion slow-mo | fast hand | `speed > 0.6` | `on \|\| toff < 0.15 ? uon : 0` | `on \|\| toff < 0.15 ? aon : aoff` |
 | Time wobble | always on | `1` | `max(0, uon + 0.6 * sin(pi * t))` | `aon` |
 | Constant u, α | always on | `1` | `uon` | `aon` |
@@ -239,16 +240,16 @@ Presets come in two lists. The **main presets** are the most representative desi
 
 | Preset | Start | when | u = | α = |
 |---|---|---|---|---|
-| Hold to slow (analog) | right trigger | `hold > 0.05` | `on ? uon * hold : 0` | `on ? aon : aoff` |
-| Bullet time · Freeze frame · Rewind while held | right trigger | `hold` | `on ? uon : 0` | `on ? aon : aoff` (u = 0.92, 1, 2) |
-| Gradual brake | right trigger | `hold` | `on ? uon * smoothstep(0, k1, ton) : 0` | `on ? aon : aoff` |
+| Hold to slow (analog) | trigger | `hold > 0.05` | `on ? uon * hold : 0` | `on ? aon : aoff` |
+| Bullet time · Freeze frame · Rewind while held | trigger | `hold` | `on ? uon : 0` | `on ? aon : aoff` (u = 0.92, 1, 2) |
+| Gradual brake | trigger | `hold` | `on ? uon * smoothstep(0, k1, ton) : 0` | `on ? aon : aoff` |
 | Outrun yourself | fast hand | `speed > k1` | `on ? min(0.95, k2 * (speed - k1)) : 0` | `on ? aon : aoff` |
 | Hitstop punch | fast hand or A | `speed > k1 \|\| tap < 0.3 \|\| (on && ton < k2)` | `on ? uon : 0` | `on ? aon : aoff` |
-| Draw your own | right trigger | `hold` | `on ? c1(ton) : 0` | `on ? aon : c2(toff)` |
+| Draw your own | trigger | `hold` | `on ? c1(ton) : 0` | `on ? aon : c2(toff)` |
 | Looping shape | always on | `1` | `c1(t % k1)` | `c1(t % k1) > 0.5 ? aon : aoff` |
 | Stutter | always on | `1` | `uon * step(0.7, sin(2 * pi * k1 * t))` | `aon` |
 | Drifting time | always on | `1` | `uon * noise(k1 * t)` | `aon` |
-| Cut back | right trigger | `hold` | `on ? 1000 * k1 : 0` | `1000` |
+| Cut back | trigger | `hold` | `on ? 1000 * k1 : 0` | `1000` |
 | Jump cuts | always on | `1` | `1000 * k2 * noise(floor(t / k1))` | `1000` |
 
 **Cuts (discontinuous counterexamples).** δ settles at u/α, and α sets how fast it gets there, so very large values
